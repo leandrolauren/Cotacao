@@ -1,0 +1,17 @@
+# version: '3.8'
+
+
+services:
+  frontend:
+    image: front-cotacao-image
+
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  backend:
+    image: back-cotacao-image
+    
+    ports:
+      - "8000:8000"
