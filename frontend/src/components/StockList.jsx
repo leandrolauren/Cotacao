@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { useState, useEffect } from 'react';
 import StockCard from './StockCard';
 import './StockList.css';
 
@@ -8,61 +7,74 @@ const StockList = () => {
   const [searchTicker, setSearchTicker] = useState('');
   const [stocksList, setStocksList] = useState([]);
   const [searchError, setSearchError] = useState(false);
+  const [searchEqual, setSearchEqual] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const { isLoading, isError } = useQuery({
-    queryKey: ['stocks'],
-    queryFn: async () => {
-      const response = await axios.get('http://localhost:8000/stock/AAPL');
-      setStocksList(prev => [{
-        ticker: 'AAPL',
-        data: {
-          currentPrice: response.data.data['Actual Price'],
-          industry: response.data.data['Industry'],
-          sector: response.data.data['Sector'],
-          grossMargin: response.data.data['Gross Margin'],
-          netMargin: response.data.data['Net Margin'],
-          priceEarning: response.data.data['P/E'],
-          variation: response.data.data['Variation']
-        }
-      }, ...prev]);
-      return [];
-    },
-    refetchOnWindowFocus: false
-  });
-
-  const handleSearch = async () => {
+  const fetchStockData = async (ticker) => {
     try {
-      const response = await axios.get(`http://localhost:8000/stock/${searchTicker}`);
-      
-      if (!response.data.sucess) {
+      const response = await axios.get(`http://localhost:8000/stock/${ticker}`);
+
+      if (!response.data.success) {
         setSearchError(true);
-        return;
+        return null;
       }
 
-      const newStock = {
-        ticker: searchTicker,
+      return {
+        ticker,
         data: {
-          currentPrice: response.data.data['Actual Price'],
-          industry: response.data.data['Industry'],
-          sector: response.data.data['Sector'],
-          grossMargin: response.data.data['Gross Margin'],
-          netMargin: response.data.data['Net Margin'],
-          priceEarning: response.data.data['P/E'],
-          variation: response.data.data['Variation']
+          currentPrice: response.data.data['Actual Price'] || 0,
+          industry: response.data.data['Industry'] || 'N/A',
+          sector: response.data.data['Sector'] || 'N/A',
+          grossMargin: response.data.data['Gross Margin'] || 0,
+          netMargin: response.data.data['Net Margin'] || 0,
+          priceEarning: response.data.data['P/E'] || 0,
+          variation: response.data.data['Variation'] || 0
         }
       };
-      
-      setStocksList(prev => [...prev, newStock]);
-      setSearchTicker('');
-      setSearchError(false);
     } catch (error) {
-      console.error('Error fetching stock:', error);
+      console.error(`Error fetching stock ${ticker}:`, error);
       setSearchError(true);
+      return null;
     }
   };
 
-  if (isLoading) return <div>Carregando ações...</div>;
-  if (isError) return <div>Erro ao carregar ações</div>;
+  const handleSearch = async () => {
+    if (!searchTicker) return setSearchError(false);
+    if (stocksList.some(stock => stock.ticker === searchTicker)) return setSearchEqual(true);
+
+    setIsLoading(true);
+    setSearchError(false);
+
+    const newStock = await fetchStockData(searchTicker);
+
+    if (newStock){
+      setStocksList(prev => [...prev, newStock]);
+      setSearchTicker('');
+    }
+
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    if (stocksList.length === 0) return;
+
+    const interval = setInterval(async () => {
+      console.log('Updating data..');
+      const updatedStocks = await Promise.all(
+        stocksList.map(async (stock) => {
+          const updatedStock = await fetchStockData(stock.ticker);
+          return updatedStock || stock;
+        })
+      );
+
+      setStocksList(prev => prev.map ((stock, index) =>
+        updatedStocks[index] ? updatedStocks[index] : stock
+    ));
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [stocksList]);
+
 
   return (
     <div className="stock-list">
@@ -74,13 +86,17 @@ const StockList = () => {
             onChange={(e) => {
               setSearchTicker(e.target.value.toUpperCase());
               setSearchError(false);
+              setSearchEqual(false);
             }}
             className={searchError ? 'error' : ''}
-            placeholder="Digite o ticker da ação (ex: AAPL)"
+            placeholder="Enter the stock ticker (ex: AAPL)"
           />
-          {searchError && <span className="error-message">Ticker não encontrado!</span>}
+          {searchError && <span className="error-message">Ticker not found!</span>}
+          {searchEqual && <span className="error-message">Ticker already consulted!</span>}
         </div>
-        <button onClick={handleSearch}>Buscar</button>
+        <button onClick={handleSearch} disabled={isLoading}>
+          {isLoading ? 'Loading...' : 'Search'}
+        </button>
       </div>
       
       <div className="cards-grid">

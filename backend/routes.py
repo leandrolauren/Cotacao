@@ -32,7 +32,7 @@ def get_stock(ticker: str) -> dict:
         logger.info(f"Fetched stock info for {ticker}")
 
         return {
-            "sucess": True,
+            "success": True,
             "data": {
                 "Name": info.get("shortName"),
                 "P/E": info.get("trailingPE"),

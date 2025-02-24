@@ -9,6 +9,7 @@ venv/
 obj/
 .config/
 node_modules
+ngrok.exe
 
 # dependencies
 /.pnp

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStockHistory } from '../hooks/useStockHistory';
 import { Line } from 'react-chartjs-2';
 import {
@@ -23,16 +23,15 @@ ChartJS.register(
 );
 
 
-
 const StockCard = ({ ticker, data = {} }) => {
-  const [showHistory, setShowHistory] = useState(false);
-  const { historyData, isLoadingHistory } = useStockHistory(ticker);
-
+  const [ showHistory, setShowHistory] = useState(false);
+  const { historyData } = useStockHistory(ticker);
+  
   const chartData = {
     labels: historyData?.map(item => item.date) || [],
     datasets: [
         {
-          label: 'Preço de Fechamento',
+          label: 'Close Price',
           data: historyData?.map(item => item.close) || [],
           borderColor: 'rgb(88, 207, 187)',
           tension: 0.01,
@@ -70,7 +69,7 @@ const StockCard = ({ ticker, data = {} }) => {
           className="history-button"
           onClick={() => setShowHistory(true)}
         >
-          Histórico
+          History
         </button>
       </div>
 
@@ -137,10 +136,11 @@ const StockCard = ({ ticker, data = {} }) => {
               plugins: {
                 legend: {
                   position: 'top',
+                  display: false,
                 },
                 title: {
                   display: true,
-                  text: `Histórico de Preços - ${ticker}`,
+                  text: `Price History - ${ticker}`,
                 },
               },
             }}
