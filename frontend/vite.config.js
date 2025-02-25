@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [viteReact()],
   server: {
     host: '0.0.0.0',
+    allowedHosts: "https://1562-2804-1b3-a802-2e81-f812-2c89-f415-bfab.ngrok-free.app/",
     headers: {
       'access-control-allow-origin': '*',
       'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',

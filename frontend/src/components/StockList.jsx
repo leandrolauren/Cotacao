@@ -70,7 +70,7 @@ const StockList = () => {
       setStocksList(prev => prev.map ((stock, index) =>
         updatedStocks[index] ? updatedStocks[index] : stock
     ));
-    }, 60000);
+    }, 6000);
 
     return () => clearInterval(interval);
   }, [stocksList]);
