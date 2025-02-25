@@ -3,10 +3,14 @@ import logging
 from models import RequestHistoryParams, PaginatedHistory, HistoryRecord
 import yfinance as yf
 from variation import get_variation
+import datetime
 
+utc_now = datetime.datetime.utcnow()
+utc_now = utc_now.replace(tzinfo=datetime.timezone.utc)
+utc_now = utc_now.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt=utc_now.strftime("%d-%m-%Y %H:%M:%S")
 )
 
 logger = logging.getLogger(__name__)
