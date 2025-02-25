@@ -15,7 +15,7 @@ export const useStockHistory = (ticker) => {
         const response = await axios.get('https://cotacao.onrender.com/history', {
           params: {
             ticker: ticker,
-            days: 200,
+            days: 365,
             page: page
           }
         });
