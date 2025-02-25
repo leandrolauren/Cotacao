@@ -12,7 +12,7 @@ export const useStockHistory = (ticker) => {
       let totalPages = 1;
       
       do {
-        const response = await axios.get('http://localhost:8000/history', {
+        const response = await axios.get('https://cotacao.onrender.com/history', {
           params: {
             ticker: ticker,
             days: 200,

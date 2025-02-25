@@ -12,7 +12,7 @@ const StockList = () => {
 
   const fetchStockData = async (ticker) => {
     try {
-      const response = await axios.get(`http://localhost:8000/stock/${ticker}`);
+      const response = await axios.get(`https://cotacao.onrender.com/stock/${ticker}`);
 
       if (!response.data.success) {
         setSearchError(true);
@@ -70,7 +70,7 @@ const StockList = () => {
       setStocksList(prev => prev.map ((stock, index) =>
         updatedStocks[index] ? updatedStocks[index] : stock
     ));
-    }, 6000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, [stocksList]);
