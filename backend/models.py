@@ -6,6 +6,7 @@ from typing import List, Optional
 class HistoryRecord(BaseModel):
     date: str = Field(..., title="Date", description="Date of the record")
     close: float = Field(..., description="Price of the closing of the stock")
+    message: Optional[str] = Field(None, description="Message for the user")
 
 
 # Model for output with history pagination

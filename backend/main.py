@@ -1,9 +1,23 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+import uvicorn, datetime, logging
 from routes import router as stock_router
+from zoneinfo import ZoneInfo
 
-app = FastAPI(title="API Cotacao")
+sp_timezone = ZoneInfo("America/Sao_Paulo")
+
+logging.Formatter.converter = lambda *args: datetime.datetime.now(tz=sp_timezone).timetuple()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - origin: %(name)s - message: %(message)s",
+    datefmt="%d-%m-%Y %H:%M:%S",
+    force=True,
+)
+
+logging.info("Starting the API")
+
+app = FastAPI(title="API Cotacao", version="1.0.0")
 
 app.include_router(stock_router)
 

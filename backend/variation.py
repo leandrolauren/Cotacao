@@ -6,12 +6,3 @@ def get_variation(info: dict):
         variation = ((actual_price - price_before) / price_before) * 100
         return variation
     return None
-
-
-if __name__ == "__main__":
-    import yfinance as yf
-
-    stock = yf.Ticker('AAPL')
-    data = stock.info
-    variation = get_variation(data)
-    print(f"{variation:.2f}" if variation is not None else "No variation data available")
