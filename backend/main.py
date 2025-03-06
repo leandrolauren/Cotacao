@@ -6,7 +6,9 @@ from zoneinfo import ZoneInfo
 
 sp_timezone = ZoneInfo("America/Sao_Paulo")
 
-logging.Formatter.converter = lambda *args: datetime.datetime.now(tz=sp_timezone).timetuple()
+logging.Formatter.converter = lambda *args: datetime.datetime.now(
+    tz=sp_timezone
+).timetuple()
 
 logging.basicConfig(
     level=logging.INFO,

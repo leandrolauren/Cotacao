@@ -37,3 +37,29 @@ class RequestHistoryParams(BaseModel):
     page: int = Field(
         gt=0, description="Number of the page for pagination (default: 1)"
     )
+
+
+# Model for Calculate validation
+class CalculationRequest(BaseModel):
+    initial_value: float = Field(
+        ..., ge=0.0, description="Initial value for calculate", title="Initial Value"
+    )
+    monthly_contribution: float = Field(
+        ...,
+        ge=0.0,
+        description="Monthly contribution amount",
+        title="Monthly Contribution",
+    )
+    annual_interest: float = Field(
+        ..., gt=0.0, description="Annual interest rate.", title="Annual Interest"
+    )
+    months: int = Field(
+        ..., gt=0, description="Number of months for calculation", title="Months"
+    )
+
+
+# Model for response calculated
+class ResponseCalculation(BaseModel):
+    success: bool = Field(..., description="Indicates whether the query was successful")
+    data: dict = Field(..., description="Dictionary of values for each month.")
+    message: Optional[str] = Field(None, description="Message for the user.")
