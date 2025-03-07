@@ -65,7 +65,7 @@ The frontend will be available at `http://localhost:3000`.
 - **Method**: POST
 - **Description**: Calculates compound interest results (total value, invested amount, interest, and monthly breakdown).
 
-## Request Body (JSON):
+### Request Body (JSON):
 
 ```json
    {
@@ -76,7 +76,7 @@ The frontend will be available at `http://localhost:3000`.
    }
 ```
 
-## Example Request:
+### Example Request:
 
 ```bash
    curl -X POST http://localhost:8000/calculation \
