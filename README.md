@@ -60,6 +60,35 @@ The frontend will be available at `http://localhost:3000`.
   GET /history?ticker=AAPL&days=30&page=1
   ```
 
+### Calculate Compound Interest
+- **Endpoint**: /calculation
+- **Method**: POST
+- **Description**: Calculates compound interest results (total value, invested amount, interest, and monthly breakdown).
+
+## Request Body (JSON):
+
+```json
+   {
+   "initial_value": 1000,
+   "monthly_contribution": 100,
+   "annual_interest": 8,
+   "months": 12
+   }
+```
+
+## Example Request:
+
+```bash
+   curl -X POST http://localhost:8000/calculation \
+   -H "Content-Type: application/json" \
+   -d '{
+      "initial_value": 1000,
+      "monthly_contribution": 100,
+      "annual_interest": 8,
+      "months": 12
+   }'
+```
+
 ## Features
 - Real-time stock data fetching.
 - Historical price retrieval with pagination.
