@@ -118,7 +118,7 @@ def get_history(params: RequestHistoryParams = Depends()):
         )
 
 
-@router.get("/calculation", response_model=ResponseCalculation)
+@router.post("/calculation", response_model=ResponseCalculation)
 def calculate(request: CalculationRequest):
     logger.info(f"Starting calculation: {request.dict()}")
 
