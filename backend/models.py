@@ -1,5 +1,8 @@
+import os
+import psycopg2 as pg
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from dotenv import load_dotenv
 
 
 # Output model for a single historical record
@@ -63,3 +66,53 @@ class ResponseCalculation(BaseModel):
     success: bool = Field(..., description="Indicates whether the query was successful")
     data: dict = Field(..., description="Dictionary of values for each month.")
     message: Optional[str] = Field(None, description="Message for the user.")
+
+
+load_dotenv()
+
+class Connection(object):
+    def __init__(self):
+        required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"]
+        
+        for var in required_vars:
+            if not os.getenv(var):
+                raise ValueError(f"Environment variable {var} is not set.")
+            
+        self.conn = pg.connect(
+            dbname=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            host=os.getenv("DB_HOST"),
+            port=os.getenv("DB_PORT"),
+        )
+        self.cursor = self.conn.cursor()
+        
+    def __enter(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is not None:
+            self.conn.rollback()
+        
+        else:
+            self.conn.commit()
+            
+        if hasattr(self, "cursor") and self.cursor:
+            self.cursor.close()
+            
+        if hasattr(self, "conn") and self.conn:
+            self.conn.close()
+            
+    def execute(self, query, params=None):
+        self.cursor.execute(query, params or ())
+        
+        if query.strip().lower().startswith("select"):
+            return self.cursor.fetchall()
+        else:
+            return self.cursor.rowcount
+        
+    def commit(self):
+        self.conn.commit()
+        
+    def rollback(self):
+        self.conn.rollback()
