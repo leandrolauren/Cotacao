@@ -26,4 +26,7 @@ def create_table():
     except Exception as e:
         logger.error(f"Error creating table: {e}")
         logger.error(f"PGSQL Return: {response}")
-        raise
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error creating table: {e}, PGSQL Response: {response}",
+        )
