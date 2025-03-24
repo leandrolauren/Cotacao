@@ -1,7 +1,7 @@
 # Cotação - Stock Information Application
 
 ## Description
-Cotacao is a stock information application that allows users to fetch real-time stock data and historical prices. Built with FastAPI for the backend and React with Vite for the frontend, this application provides a seamless experience for stock market enthusiasts.
+Cotacao is a stock information application that allows users to fetch real-time stock data and historical prices. Built with FastAPI for the backend, this application provides a seamless experience for stock market enthusiasts.
 
 ## Installation
 
@@ -15,16 +15,6 @@ Cotacao is a stock information application that allows users to fetch real-time 
    pip install -r requirements.txt
    ```
 
-### Frontend
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install the required dependencies:
-   ```bash
-   npm install
-   ```
-
 ## Usage
 
 ### Running the Backend
@@ -32,13 +22,6 @@ To start the backend server, run:
 ```bash
 uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
-
-### Running the Frontend
-To start the frontend application, run:
-```bash
-npm start
-```
-The frontend will be available at `http://localhost:3000`.
 
 ## API Endpoints
 
