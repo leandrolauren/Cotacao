@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def create_table():
     try:
-        
+
         with Connection() as conn:
             response = conn.execute(
                 """
@@ -22,7 +22,7 @@ def create_table():
                 """
             )
         return {"success": True, "message": f"Table created successfully, {response}"}
-    
+
     except Exception as e:
         logger.error(f"Error creating table: {e}")
         logger.error(f"PGSQL Return: {response}")

@@ -70,14 +70,15 @@ class ResponseCalculation(BaseModel):
 
 load_dotenv()
 
+
 class Connection(object):
     def __init__(self):
         required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"]
-        
+
         for var in required_vars:
             if not os.getenv(var):
                 raise ValueError(f"Environment variable {var} is not set.")
-            
+
         self.conn = pg.connect(
             dbname=os.getenv("DB_NAME"),
             user=os.getenv("DB_USER"),
@@ -86,33 +87,33 @@ class Connection(object):
             port=os.getenv("DB_PORT"),
         )
         self.cursor = self.conn.cursor()
-        
+
     def __enter(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
             self.conn.rollback()
-        
+
         else:
             self.conn.commit()
-            
+
         if hasattr(self, "cursor") and self.cursor:
             self.cursor.close()
-            
+
         if hasattr(self, "conn") and self.conn:
             self.conn.close()
-            
+
     def execute(self, query, params=None):
         self.cursor.execute(query, params or ())
-        
+
         if query.strip().lower().startswith("select"):
             return self.cursor.fetchall()
         else:
             return self.cursor.rowcount
-        
+
     def commit(self):
         self.conn.commit()
-        
+
     def rollback(self):
         self.conn.rollback()
