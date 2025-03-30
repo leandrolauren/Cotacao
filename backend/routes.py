@@ -1,16 +1,17 @@
-import traceback
-from fastapi import APIRouter, Depends, HTTPException
 import logging
-from models import (
+import traceback
+
+import yfinance as yf
+from fastapi import APIRouter, Depends, HTTPException
+
+from backend.calculation import calculate_interest, calculate_variation
+from backend.models import (
     CalculationRequest,
-    RequestHistoryParams,
-    PaginatedHistory,
     HistoryRecord,
+    PaginatedHistory,
+    RequestHistoryParams,
     ResponseCalculation,
 )
-import yfinance as yf
-from calculation import calculate_variation, calculate_interest
-
 
 logger = logging.getLogger(__name__)
 
