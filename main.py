@@ -1,8 +1,12 @@
+import datetime
+import logging
+from zoneinfo import ZoneInfo
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn, datetime, logging
-from routes import router as stock_router
-from zoneinfo import ZoneInfo
+
+from backend.routes import router as stock_router
 
 sp_timezone = ZoneInfo("America/Sao_Paulo")
 
