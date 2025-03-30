@@ -1,5 +1,6 @@
-from models import CalculationRequest
 import logging
+
+from backend.models import CalculationRequest
 
 logger = logging.getLogger(__name__)
 
