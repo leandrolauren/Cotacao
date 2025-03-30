@@ -1,8 +1,9 @@
 import os
-import psycopg2 as pg
-from pydantic import BaseModel, Field
 from typing import List, Optional
+
+import psycopg2 as pg
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
 
 # Output model for a single historical record
@@ -72,23 +73,29 @@ load_dotenv()
 
 
 class Connection(object):
+
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, "_instance"):
+            cls._instance = super(Connection, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"]
+        self.__check_var()
 
-        for var in required_vars:
-            if not os.getenv(var):
-                raise ValueError(f"Environment variable {var} is not set.")
+        try:
+            self.conn = pg.connect(
+                dbname=os.getenv("DB_NAME"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASSWORD"),
+                host=os.getenv("DB_HOST"),
+                port=os.getenv("DB_PORT"),
+            )
+            self.cursor = self.conn.cursor()
 
-        self.conn = pg.connect(
-            dbname=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT"),
-        )
-        self.cursor = self.conn.cursor()
+        except pg.Error as e:
+            raise ConnectionError(f"Error connecting to the database: {e}")
 
-    def __enter(self):
+    def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -98,11 +105,18 @@ class Connection(object):
         else:
             self.conn.commit()
 
-        if hasattr(self, "cursor") and self.cursor:
+        if self.cursor:
             self.cursor.close()
 
-        if hasattr(self, "conn") and self.conn:
+        if self.conn:
             self.conn.close()
+
+    def __check_var(self):
+        required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"]
+
+        for var in required_vars:
+            if not os.getenv(var):
+                raise ValueError(f"Environment variable {var} is not set.")
 
     def execute(self, query, params=None):
         self.cursor.execute(query, params or ())
@@ -117,3 +131,10 @@ class Connection(object):
 
     def rollback(self):
         self.conn.rollback()
+
+
+if __name__ == "__main__":
+    with Connection() as conn:
+        result = conn.execute("select * from confirmations")
+        print(hex(id(conn)))
+        print(result)
