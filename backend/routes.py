@@ -164,14 +164,27 @@ def get_token(token: str = Depends(auth.oauth2_scheme)):
     """
     Endpoint to verify the access token.
     """
-    payload = auth.verify_token(token)
-    if not payload:
+    logger.info("Verifying access token.")
+    try:
+        payload = auth.verify_token(token)
+
+        if not payload:
+            logger.warning("Invalid access token.")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid access token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        logger.info("Access token verified successfully.")
+        return {"token": token, "user": payload["sub"]}
+    except HTTPException as e:
+        logger.error(f"HTTP Error during token verification: {e.detail}")
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error verifying token: {traceback.format_exc()}")
         raise HTTPException(
-            status_code=401,
-            detail="Invalid access token",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=500, detail="An error occurred while verifying the token."
         )
-    return {"token": token, "user": payload["sub"]}
 
 
 @router.post("/login")
@@ -180,14 +193,26 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     Endpoint for user login, returning an access token.
     """
     logger.info(f"User login attempt: {form_data.username}")
-    user = get_user_from_db(form_data.username)
+    try:
+        user = get_user_from_db(form_data.username)
 
-    if not user or not auth.verify_password(form_data.password, user["password_hash"]):
-        logger.warning(f"Invalid login attempt for user: {form_data.username}")
-        raise HTTPException(
-            status_code=400,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = auth.create_access_token(data={"sub": user["email"]})
-    return {"access_token": access_token, "token_type": "bearer"}
+        if not user or not auth.verify_password(
+            form_data.password, user["password_hash"]
+        ):
+            logger.warning(f"Invalid login attempt for user: {form_data.username}")
+            raise HTTPException(
+                status_code=400,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        access_token = auth.create_access_token(data={"sub": user["email"]})
+        logger.info(f"User {form_data.username} logged in successfully.")
+
+        return {"access_token": access_token, "token_type": "bearer"}
+    except HTTPException as e:
+        logger.error(f"HTTP Error during login: {e.detail}")
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error during login: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail="An error occurred during login.")
