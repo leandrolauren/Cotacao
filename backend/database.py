@@ -71,30 +71,31 @@ def get_user_from_db(email: str) -> dict:
     """
     Fetch user details from the database.
     """
-    sql_query = "SELECT * FROM users WHERE email = :email"
     try:
         logger.info(f"Fetching user with email: {email}")
         with Connection() as conn:
-            result = conn.execute((sql_query), {"email": email})
-            user = result.fetchone()
-            if user:
-                logger.info(f"User found: {user}")
+            result = conn.execute(
+                "SELECT email, password_hash, is_active FROM postgres.public.users WHERE email = %s",
+                (email,),
+            )
+            data_user = result[0]
+            if data_user:
+                logger.info(f"User found: {data_user[0]}")
                 return {
-                    "email": user[1],
-                    "password_hash": user[2],
-                    "is_active": user[3],
+                    "email": data_user[0],
+                    "password_hash": data_user[1],
+                    "is_active": data_user[2],
                 }
             else:
+                logger.info(f"No user found with email: {email}")
                 return None
     except Exception as e:
         logger.error(f"Error fetching user from database: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error",
+            detail="Error on consulting user in database",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-
-if __name__ == "__main__":
-
-    response = create_table()
-    print(response)
+    finally:
+        logger.info("Finished fetching user from database")
