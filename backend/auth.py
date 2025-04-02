@@ -1,14 +1,16 @@
 import datetime
-from zoneinfo import ZoneInfo
-from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
-from jose import jwt
-import os
-from dotenv import load_dotenv
 import logging
+import os
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
-sp_timezone = ZoneInfo("America/Sao_Paulo")
+from dotenv import load_dotenv
+from fastapi import HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+from backend.models import Connection
 
 logger = logging.getLogger(__name__)
 
@@ -75,15 +77,45 @@ class Auth:
         Create a JWT access token.
         """
         to_encode = data.copy()
-        expire = datetime.now(sp_timezone) + timedelta(
+        expire = datetime.now(tz=ZoneInfo("UTC")) + timedelta(
             minutes=self.access_token_expires_minutes
         )
-        to_encode.update({"exp": expire})
+        to_encode.update({"exp": expire.timestamp()})
+        logger.debug(f"Creating access token with data: {to_encode}")
         return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+
+    def verify_token(self, access_token: str) -> dict:
+        """
+        Verify a JWT access token and return the payload.
+        """
+        try:
+            payload = jwt.decode(
+                access_token, self.secret_key, algorithms=[self.algorithm]
+            )
+            return payload
+        except JWTError:
+            logger.error("Token verification failed")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid access token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
 
 if __name__ == "__main__":
+
+    passw = "123456789"
+    hashed_pass = Auth().get_password_hash(passw)
     auth1 = Auth()
     print("Token", auth1.create_access_token({"sub": "test_user"}))
-    print("Hash Password", auth1.get_password_hash("test_password"))
-    print("Hash Password", auth1.get_password_hash("1234"))
+    print("Hash Password", auth1.get_password_hash("123456789"))
+    print("Verify Password", auth1.verify_password(passw, hashed_pass))
+    print(
+        "Verify Password", auth1.verify_password("123456789", hashed_pass), hashed_pass
+    )
+
+    print(
+        auth1.verify_password(
+            "123456789", "$2b$12$70YTu6YRUZQ.gI3oBcjk7uHNLaqvE0r1SGE1dCIhstnWN/y.BlSf6"
+        )
+    )

@@ -2,8 +2,9 @@ import logging
 import textwrap
 from typing import Any, Dict
 
-from fastapi import HTTPException
-from models import Connection
+from fastapi import HTTPException, status
+
+from backend.models import Connection
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,33 @@ def create_table() -> Dict[str, Any]:
         raise HTTPException(
             status_code=500, detail="Internal server error during database setup"
         ) from e
+
+
+def get_user_from_db(email: str) -> dict:
+    """
+    Fetch user details from the database.
+    """
+    sql_query = "SELECT * FROM users WHERE email = :email"
+    try:
+        logger.info(f"Fetching user with email: {email}")
+        with Connection() as conn:
+            result = conn.execute((sql_query), {"email": email})
+            user = result.fetchone()
+            if user:
+                logger.info(f"User found: {user}")
+                return {
+                    "email": user[1],
+                    "password_hash": user[2],
+                    "is_active": user[3],
+                }
+            else:
+                return None
+    except Exception as e:
+        logger.error(f"Error fetching user from database: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
 
 
 if __name__ == "__main__":

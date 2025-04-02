@@ -3,8 +3,11 @@ import traceback
 
 import yfinance as yf
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 
+from backend.auth import Auth
 from backend.calculation import calculate_interest, calculate_variation
+from backend.database import get_user_from_db
 from backend.models import (
     CalculationRequest,
     HistoryRecord,
@@ -12,6 +15,8 @@ from backend.models import (
     RequestHistoryParams,
     ResponseCalculation,
 )
+
+auth = Auth()
 
 logger = logging.getLogger(__name__)
 
@@ -152,3 +157,37 @@ def calculate(request: CalculationRequest) -> dict:
     except Exception as e:
         logger.error(f"Unexpected error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.post("/token")
+def get_token(token: str = Depends(auth.oauth2_scheme)):
+    """
+    Endpoint to verify the access token.
+    """
+    payload = auth.verify_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {"token": token, "user": payload["sub"]}
+
+
+@router.post("/login")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Endpoint for user login, returning an access token.
+    """
+    logger.info(f"User login attempt: {form_data.username}")
+    user = get_user_from_db(form_data.username)
+
+    if not user or not auth.verify_password(form_data.password, user["password_hash"]):
+        logger.warning(f"Invalid login attempt for user: {form_data.username}")
+        raise HTTPException(
+            status_code=400,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = auth.create_access_token(data={"sub": user["email"]})
+    return {"access_token": access_token, "token_type": "bearer"}
