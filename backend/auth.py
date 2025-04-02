@@ -40,7 +40,7 @@ class Auth:
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
         self.access_token_expires_minutes = int(
-            os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 15)
+            os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
         )
         self.secret_key = os.getenv("SECRET_KEY")
         self.algorithm = os.getenv("ALGORITHM", "HS256")
@@ -92,6 +92,25 @@ class Auth:
             payload = jwt.decode(
                 access_token, self.secret_key, algorithms=[self.algorithm]
             )
+
+            if datetime.now(tz=ZoneInfo("UTC")) > datetime.fromtimestamp(
+                payload["exp"], tz=ZoneInfo("UTC")
+            ):
+                logger.warning("Token has expired")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has expired",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            if "sub" not in payload:
+                logger.warning("Token does not contain 'sub'")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid access token",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            logger.debug(f"Token verified successfully: {payload}")
             return payload
         except JWTError:
             logger.error("Token verification failed")
@@ -101,21 +120,21 @@ class Auth:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-
-if __name__ == "__main__":
-
-    passw = "123456789"
-    hashed_pass = Auth().get_password_hash(passw)
-    auth1 = Auth()
-    print("Token", auth1.create_access_token({"sub": "test_user"}))
-    print("Hash Password", auth1.get_password_hash("123456789"))
-    print("Verify Password", auth1.verify_password(passw, hashed_pass))
-    print(
-        "Verify Password", auth1.verify_password("123456789", hashed_pass), hashed_pass
-    )
-
-    print(
-        auth1.verify_password(
-            "123456789", "$2b$12$70YTu6YRUZQ.gI3oBcjk7uHNLaqvE0r1SGE1dCIhstnWN/y.BlSf6"
+    def user_register(self, email: str, password: str) -> dict:
+        """
+        Register a new user in the database.
+        """
+        hashed_password = self.get_password_hash(password)
+        sql_query = (
+            "INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id"
         )
-    )
+        try:
+            with Connection() as conn:
+                conn.execute(sql_query, (email, hashed_password))
+                return {"success": True, "message": "User registered successfully"}
+        except Exception as e:
+            logger.error(f"Error registering user: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
