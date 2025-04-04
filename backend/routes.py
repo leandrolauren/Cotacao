@@ -1,9 +1,11 @@
 import logging
+import os
 import traceback
 
 import yfinance as yf
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.testclient import TestClient
 
 from backend.auth import Auth
 from backend.calculation import calculate_interest, calculate_variation
@@ -216,3 +218,41 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     except Exception as e:
         logger.error(f"Unexpected error during login: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="An error occurred during login.")
+
+
+@router.get("/test")
+def test_full_flow():
+    if os.getenv("ENVIRONMENT") != "development":
+        print("Skipping tests as the environment is not development.")
+        return
+
+    client = TestClient(router)
+
+    # Verify the valid login
+    login_response = client.post(
+        "/login",
+        data={
+            "username": "leandro@gmail.com",
+            "password": "123456789",
+            "grant_type": "password",
+        },
+    )
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+    print(f"✅ Test Login: OK \nToken: {token}")
+
+    # Verify the token
+    token_response = client.post("/token", headers={"Authorization": f"Bearer {token}"})
+    assert token_response.status_code == 200
+    assert token_response.json()["user"] == "leandro@gmail.com"
+    print("✅ Test valid Token: OK")
+
+    # Verify the invalid login
+    invalid_response = client.post(
+        "/token",
+        headers={
+            "Authorization": "invalid_token",
+        },
+    )
+    assert invalid_response.status_code == 401
+    print("✅ Test invalid Token: OK")
