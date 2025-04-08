@@ -103,8 +103,9 @@ class Calculation:
         try:
             price_before = info.get("previousClose")
             actual_price = info.get("regularMarketPrice")
+            short_name = info.get("shortName", "Unknown")
             logger.info(
-                f"Calculating variation for {info.get("shortName")}. Previous Close: {price_before}, Regular Market Price: {actual_price}"
+                f"Calculating variation for {short_name}. Previous Close: {price_before}, Regular Market Price: {actual_price}"
             )
 
             if price_before and actual_price:
