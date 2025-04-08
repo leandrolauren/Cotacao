@@ -8,7 +8,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.testclient import TestClient
 
 from backend.auth import Auth
-from backend.calculation import calculate_interest, calculate_variation
+from backend.calculation import Calculation
 from backend.database import get_user_from_db
 from backend.models import (
     CalculationRequest,
@@ -19,6 +19,7 @@ from backend.models import (
 )
 
 auth = Auth()
+calc = Calculation()
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +28,19 @@ router = APIRouter()
 
 @router.get("/stock/{ticker}")
 def get_stock(ticker: str) -> dict:
+    """_summary_
+    Args:
+        ticker (str): Stock ticker symbol.
+    Returns:
+        dict: Dictionary containing stock information.
+    """
 
     logger.info(f"Fetching stock info for {ticker}")
 
     try:
         stock = yf.Ticker(ticker)
         info = stock.info
-        variation = calculate_variation(info)
+        variation = calc.calculate_variation(info)
 
         if not info:
             raise HTTPException(
@@ -131,8 +138,11 @@ def calculate(request: CalculationRequest) -> dict:
     logger.info(f"Starting calculation: {request.dict()}")
 
     try:
-        total_value, amount_invested, total_interest, months = calculate_interest(
-            request
+        total_value, amount_invested, total_interest, months = calc.calculate_totals(
+            request.initial_value,
+            request.monthly_contribution,
+            request.annual_interest,
+            request.months,
         )
 
         logger.info("Calculation ended successfully.")
