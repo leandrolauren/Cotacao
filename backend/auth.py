@@ -23,11 +23,9 @@ class Auth:
     This class is a singleton to ensure that only one instance is created.
     """
 
-    _instance = None
-
     def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
+        if not hasattr(cls, "_instance"):
+            cls._instance = super(Auth, cls).__new__(cls)
         return cls._instance
 
     def __init__(self):
