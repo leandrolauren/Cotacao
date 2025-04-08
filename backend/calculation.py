@@ -1,6 +1,6 @@
 import logging
 
-# from backend.models import CalculationRequest
+from backend.models import CalculationRequest
 
 logger = logging.getLogger(__name__)
 
@@ -133,42 +133,42 @@ def calculate_variation(info: dict):
     return None
 
 
-# def calculate_interest(request: CalculationRequest):
-#     try:
-#         logger.debug(f"Calculating with params: {request.dict()}")
+def calculate_interest(request: CalculationRequest):
+    try:
+        logger.debug(f"Calculating with params: {request.dict()}")
 
-#         if request.annual_interest <= 0:
-#             raise ValueError("Interest rate must be greater than zero")
+        if request.annual_interest <= 0:
+            raise ValueError("Interest rate must be greater than zero")
 
-#         monthly_rate = (request.annual_interest / 100) / 12
+        monthly_rate = (request.annual_interest / 100) / 12
 
-#         total_value = request.initial_value
-#         amount_invested = request.initial_value
-#         total_interest = 0
-#         months = []
+        total_value = request.initial_value
+        amount_invested = request.initial_value
+        total_interest = 0
+        months = []
 
-#         for i in range(1, request.months + 1):
+        for i in range(1, request.months + 1):
 
-#             if i > 1:
-#                 total_value += request.monthly_contribution
-#                 amount_invested += request.monthly_contribution
+            if i > 1:
+                total_value += request.monthly_contribution
+                amount_invested += request.monthly_contribution
 
-#             fees = total_value * monthly_rate
-#             total_value += fees
-#             total_interest += fees
+            fees = total_value * monthly_rate
+            total_value += fees
+            total_interest += fees
 
-#             months.append(
-#                 {
-#                     "Month": i,
-#                     "Interest Amount": fees,
-#                     "Amount Invested": amount_invested,
-#                     "Accumulated Interest": total_interest,
-#                     "Accumulated Total": total_value,
-#                 }
-#             )
+            months.append(
+                {
+                    "Month": i,
+                    "Interest Amount": fees,
+                    "Amount Invested": amount_invested,
+                    "Accumulated Interest": total_interest,
+                    "Accumulated Total": total_value,
+                }
+            )
 
-#         return total_value, amount_invested, total_interest, months
+        return total_value, amount_invested, total_interest, months
 
-#     except Exception as e:
-#         logger.error(f"Error in calculate_interest: {str(e)}")
-#         raise
+    except Exception as e:
+        logger.error(f"Error in calculate_interest: {str(e)}")
+        raise
