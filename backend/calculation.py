@@ -1,7 +1,5 @@
 import logging
 
-from backend.models import CalculationRequest
-
 logger = logging.getLogger(__name__)
 
 
@@ -10,94 +8,118 @@ class Calculation:
     Calculation class to handle financial calculations.
     """
 
+    def __new__(cls, *args, **kwargs):
+        """
+        Singleton pattern to ensure only one instance of Calculation exists.
+        """
+        if not hasattr(cls, "_instance"):
+            cls._instance = super(Calculation, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         if not hasattr(self, "_initialized"):
             self._instanced = True
 
     def calculate_monthly_rate(self, annual_rate: float) -> float:
-        """
-        Calculate the monthly interest rate from the annual rate.
-        :param annual_rate: Annual interest rate as a percentage.
-        :return: Monthly interest rate as a decimal.
+        """_summary_
+        Args:
+            :param annual_rate: Annual interest rate as a percentage.
+            :return: Monthly interest rate as a decimal.
         """
         if annual_rate <= 0:
             raise ValueError("Annual interest rate must be greater than zero")
         return (annual_rate / 100) / 12
 
-    def calculate_total_value(
+    def calculate_totals(
         self,
         initial_value: float,
         monthly_contribution: float,
-        months: int,
         annual_interest: float,
+        number_months: int,
     ) -> float:
-        """
-        Calculate the total value after a certain number of months with monthly contributions and interest.
-        :param initial_value: Initial investment amount.
-        :param monthly_contribution: Monthly contribution amount.
-        :param months: Number of months to calculate.
-        :param annual_interest: Annual interest rate as a percentage.
-        :return: Total value after the specified number of months.
-        """
-        monthly_rate = self.calculate_monthly_rate(annual_interest)
-        total_value = initial_value
+        """_summary_
 
-        for _ in range(months):
-            total_value += monthly_contribution
-            fees = total_value * monthly_rate
-            total_value += fees
+        Args:
+            param: initial_value (float): Initial value for the calculation.
+            param: monthly_contribution (float): Monthly contribution amount.
+            param: annual_interest (float): Annual interest rate as a percentage.
+            param: months (int): Number of months for the calculation.
 
-        return total_value
+        Raises:
+            ValueError: If the annual interest rate is less than or equal to zero.
 
-    def calculate_total_invested(
-        self, initial_value: float, monthly_contribution: float, months: int
-    ) -> float:
+        Returns:
+            float: The total value after the specified number of months.
         """
-        Calculate the total amount invested after a certain number of months.
-        :param initial_value: Initial investment amount.
-        :param monthly_contribution: Monthly contribution amount.
-        :param months: Number of months to calculate.
-        :return: Total amount invested after the specified number of months.
-        """
-        return initial_value + (monthly_contribution * months)
+        try:
 
-    def calculate_total_interest(
-        self,
-        initial_value: float,
-        monthly_contribution: float,
-        months: int,
-        annual_interest: float,
-    ) -> dict:
-        """
-        Calculate the total interest earned after a certain number of months.
-        :param initial_value: Initial investment amount.
-        :param monthly_contribution: Monthly contribution amount.
-        :param months: Number of months to calculate.
-        :param annual_interest: Annual interest rate as a percentage.
-        :return: Total interest earned after the specified number of months.
-        """
-        monthly_rate = self.calculate_monthly_rate(annual_interest)
-        total_value = initial_value
-        total_interest = 0
-        months_results = []
+            if annual_interest <= 0:
+                raise ValueError("Interest rate must be greater than zero")
 
-        for _ in range(months):
-            total_value += monthly_contribution
-            fees = total_value * monthly_rate
-            total_value += fees
-            total_interest += fees
+            monthly_rate = self.calculate_monthly_rate(annual_interest)
 
-            months_results.append(
-                {
-                    "Month": _ + 1,
-                    "Interest Amount": fees,
-                    "Amount Invested": initial_value + (monthly_contribution * (_ + 1)),
-                    "Accumulated Interest": total_interest,
-                    "Accumulated Total": total_value,
-                }
+            total_value = initial_value
+            amount_invested = initial_value
+            total_interest = 0
+            months = []
+
+            for i in range(1, number_months + 1):
+
+                if i > 1:
+                    total_value += monthly_contribution
+                    amount_invested += monthly_contribution
+
+                fees = total_value * monthly_rate
+                total_value += fees
+                total_interest += fees
+
+                months.append(
+                    {
+                        "Month": i,
+                        "Interest Amount": fees,
+                        "Amount Invested": amount_invested,
+                        "Accumulated Interest": total_interest,
+                        "Accumulated Total": total_value,
+                    }
+                )
+
+            return total_value, amount_invested, total_interest, months
+
+        except Exception as e:
+            logger.error(f"Error in calculate_interest: {str(e)}")
+            raise
+
+    def calculate_variation(self, info: dict):
+        """_summary_
+        Args:
+            info (dict): Dictionary containing stock information.
+                Expected keys: 'previousClose' and 'regularMarketPrice'.
+        Returns:
+            float: Percentage variation between previous close and current market price.
+        """
+        if not isinstance(info, dict):
+            raise ValueError("info must be a dictionary")
+
+        try:
+            price_before = info.get("previousClose")
+            actual_price = info.get("regularMarketPrice")
+            logger.info(
+                f"Calculating variation for {info.get("shortName")}. Previous Close: {price_before}, Regular Market Price: {actual_price}"
             )
 
-        return total_interest, total_value, months_results
+            if price_before and actual_price:
+                variation = ((actual_price - price_before) / price_before) * 100
+                logger.info(f"Variation calculated: {variation:.2f}%")
+                return variation
+        except KeyError as e:
+            logger.error(f"Key error: {str(e)}")
+            raise ValueError(f"Missing key in info dictionary: {str(e)}")
+
+        except Exception as e:
+            logger.error(f"Error calculating variation: {str(e)}")
+            raise ValueError(f"Error calculating variation: {str(e)}")
+
+        return None
 
 
 if __name__ == "__main__":
@@ -106,69 +128,21 @@ if __name__ == "__main__":
     monthly_contribution = 100
     months = 12
     annual_interest = 5
-    total_value = calc.calculate_total_value(
-        initial_value, monthly_contribution, months, annual_interest
+    total_value, amount_invested, total_interest, months = calc.calculate_totals(
+        initial_value, monthly_contribution, annual_interest, months
     )
-    total_invested = calc.calculate_total_invested(
-        initial_value, monthly_contribution, months
-    )
-    total_interest, total_value, months = calc.calculate_total_interest(
-        initial_value, monthly_contribution, months, annual_interest
-    )
+
     print(f"Total Value: {total_value}")
-    print(f"Total Invested: {total_invested}")
+    print(f"Total Invested: {amount_invested}")
     print(f"Total Interest: {total_interest}")
     print("Monthly Results:")
     for month in months:
         print(month)
 
+    var = {"previousClose": 100, "regularMarketPrice": 45}
+    print(type(var))
+    print(var["previousClose"])
+    print(var["regularMarketPrice"])
 
-def calculate_variation(info: dict):
-    price_before = info.get("previousClose")
-    actual_price = info.get("regularMarketPrice")
-
-    if price_before and actual_price:
-        variation = ((actual_price - price_before) / price_before) * 100
-        return variation
-    return None
-
-
-def calculate_interest(request: CalculationRequest):
-    try:
-        logger.debug(f"Calculating with params: {request.dict()}")
-
-        if request.annual_interest <= 0:
-            raise ValueError("Interest rate must be greater than zero")
-
-        monthly_rate = (request.annual_interest / 100) / 12
-
-        total_value = request.initial_value
-        amount_invested = request.initial_value
-        total_interest = 0
-        months = []
-
-        for i in range(1, request.months + 1):
-
-            if i > 1:
-                total_value += request.monthly_contribution
-                amount_invested += request.monthly_contribution
-
-            fees = total_value * monthly_rate
-            total_value += fees
-            total_interest += fees
-
-            months.append(
-                {
-                    "Month": i,
-                    "Interest Amount": fees,
-                    "Amount Invested": amount_invested,
-                    "Accumulated Interest": total_interest,
-                    "Accumulated Total": total_value,
-                }
-            )
-
-        return total_value, amount_invested, total_interest, months
-
-    except Exception as e:
-        logger.error(f"Error in calculate_interest: {str(e)}")
-        raise
+    variation = calc.calculate_variation(var)
+    print(f"Variation: {variation}%")
