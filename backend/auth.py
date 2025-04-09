@@ -10,8 +10,6 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from backend.models import Connection
-
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -116,23 +114,4 @@ class Auth:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid access token",
                 headers={"WWW-Authenticate": "Bearer"},
-            )
-
-    def user_register(self, email: str, password: str) -> dict:
-        """
-        Register a new user in the database.
-        """
-        hashed_password = self.get_password_hash(password)
-        sql_query = (
-            "INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id"
-        )
-        try:
-            with Connection() as conn:
-                conn.execute(sql_query, (email, hashed_password))
-                return {"success": True, "message": "User registered successfully"}
-        except Exception as e:
-            logger.error(f"Error registering user: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Internal server error",
             )
