@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from backend.auth import Auth
 from backend.calculation import Calculation
-from backend.database import get_user_from_db
+from backend.database import Database
 from backend.models import (
     CalculationRequest,
     HistoryRecord,
@@ -20,6 +20,7 @@ from backend.models import (
 
 auth = Auth()
 calc = Calculation()
+db = Database()
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,21 @@ def get_stock(ticker: str) -> dict:
 
 @router.get("/history", response_model=PaginatedHistory)
 def get_history(params: RequestHistoryParams = Depends()):
+    token = params.token
+    if not token:
+        logger.warning("Token is required for this endpoint.")
+        raise HTTPException(
+            status_code=401,
+            detail="Token is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not auth.verify_token(token):
+        logger.warning("Invalid token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     logger.info(
         f"Fetching closing prices for {params.ticker} over the last {params.days} days (page {params.page})"
@@ -135,7 +151,7 @@ def get_history(params: RequestHistoryParams = Depends()):
 
 @router.post("/calculation", response_model=ResponseCalculation)
 def calculate(request: CalculationRequest) -> dict:
-    logger.info(f"Starting calculation: {request.dict()}")
+    logger.info(f"Starting calculation: {dict(request)}")
 
     try:
         total_value, amount_invested, total_interest, months = calc.calculate_totals(
@@ -143,6 +159,7 @@ def calculate(request: CalculationRequest) -> dict:
             request.monthly_contribution,
             request.annual_interest,
             request.months,
+            request.token,
         )
 
         logger.info("Calculation ended successfully.")
@@ -206,7 +223,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     logger.info(f"User login attempt: {form_data.username}")
     try:
-        user = get_user_from_db(form_data.username)
+        user = db.get_user_from_db(form_data.username)
 
         if not user or not auth.verify_password(
             form_data.password, user["password_hash"]
@@ -228,6 +245,46 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     except Exception as e:
         logger.error(f"Unexpected error during login: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="An error occurred during login.")
+
+
+@router.post("/register")
+async def register(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Endpoint for user registration.
+    """
+    logger.info(f"User registration attempt: {form_data.username}")
+    try:
+
+        if not form_data.username or not form_data.password:
+            logger.warning("Username and password are required.")
+            raise HTTPException(
+                status_code=400,
+                detail="Username and password are required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        user = db.get_user_from_db(form_data.username)
+
+        if user.get("success"):
+            logger.warning(f"User {form_data.username} already exists.")
+            raise HTTPException(
+                status_code=400,
+                detail="User already exists",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        db.user_register(form_data.username, form_data.password)
+        logger.info(f"User {form_data.username} registered successfully.")
+
+        return {"message": "User registered successfully."}
+    except HTTPException as e:
+        logger.error(f"HTTP Error during registration: {e.detail}")
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error during registration: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500, detail="An error occurred during registration."
+        )
 
 
 @router.get("/test")
