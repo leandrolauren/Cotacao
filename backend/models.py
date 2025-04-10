@@ -41,11 +41,6 @@ class RequestHistoryParams(BaseModel):
     page: int = Field(
         gt=0, description="Number of the page for pagination (default: 1)"
     )
-    token: str = Field(
-        ...,
-        description="Authentication token for user validation",
-        title="Token",
-    )
 
 
 # Model for Calculate validation
@@ -64,11 +59,6 @@ class CalculationRequest(BaseModel):
     )
     months: int = Field(
         ..., gt=0, description="Number of months for calculation", title="Months"
-    )
-    token: str = Field(
-        ...,
-        description="Authentication token for user validation",
-        title="Token",
     )
 
 

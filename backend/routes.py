@@ -3,7 +3,7 @@ import os
 import traceback
 
 import yfinance as yf
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.testclient import TestClient
 
@@ -28,17 +28,29 @@ router = APIRouter()
 
 
 @router.get("/stock/{ticker}")
-def get_stock(ticker: str) -> dict:
+def get_stock(ticker: str, token: str = Header(..., alias="Authorizatiion")) -> dict:
     """_summary_
     Args:
         ticker (str): Stock ticker symbol.
     Returns:
         dict: Dictionary containing stock information.
     """
-
-    logger.info(f"Fetching stock info for {ticker}")
-
+    if not token:
+        logger.warning("Token is required for this endpoint.")
+        raise HTTPException(
+            status_code=401,
+            detail="Token is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not auth.verify_token(token):
+        logger.warning("Invalid token.")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     try:
+        logger.info(f"Fetching stock info for {ticker}")
         stock = yf.Ticker(ticker)
         info = stock.info
         variation = calc.calculate_variation(info)
@@ -74,8 +86,19 @@ def get_stock(ticker: str) -> dict:
 
 
 @router.get("/history", response_model=PaginatedHistory)
-def get_history(params: RequestHistoryParams = Depends()):
-    token = params.token
+def get_history(
+    params: RequestHistoryParams = Depends(),
+    token: str = Header(..., alias="Authorization"),
+) -> PaginatedHistory:
+    """
+    Fetch historical stock data for a given ticker symbol.
+    Args:
+        params (RequestHistoryParams): Parameters for fetching historical data.
+        token (str): Authentication token.
+    Returns:
+        PaginatedHistory: Paginated historical stock data.
+    """
+
     if not token:
         logger.warning("Token is required for this endpoint.")
         raise HTTPException(
@@ -150,16 +173,33 @@ def get_history(params: RequestHistoryParams = Depends()):
 
 
 @router.post("/calculation", response_model=ResponseCalculation)
-def calculate(request: CalculationRequest) -> dict:
-    logger.info(f"Starting calculation: {dict(request)}")
+def calculate(
+    request: CalculationRequest, token: str = Header(..., alias="Authorization")
+) -> dict:
+    if not token:
+        logger.warning("Token is required for this endpoint.")
+        raise HTTPException(
+            status_code=401,
+            detail="Token is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     try:
+        if not auth.verify_token(token):
+            logger.warning("Invalid token.")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        logger.info(f"Starting calculation: {dict(request)}")
         total_value, amount_invested, total_interest, months = calc.calculate_totals(
             request.initial_value,
             request.monthly_contribution,
             request.annual_interest,
             request.months,
-            request.token,
+            token,
         )
 
         logger.info("Calculation ended successfully.")
