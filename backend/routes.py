@@ -28,21 +28,18 @@ router = APIRouter()
 
 
 @router.get("/stock/{ticker}")
-def get_stock(ticker: str, token: str = Header(..., alias="Authorizatiion")) -> dict:
+def get_stock(
+    ticker: str, authorization: str = Header(..., alias="Authorization")
+) -> dict:
     """_summary_
     Args:
         ticker (str): Stock ticker symbol.
     Returns:
         dict: Dictionary containing stock information.
+
     """
-    if not token:
-        logger.warning("Token is required for this endpoint.")
-        raise HTTPException(
-            status_code=401,
-            detail="Token is required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if not auth.verify_token(token):
+
+    if not auth.verify_token(authorization):
         logger.warning("Invalid token.")
         raise HTTPException(
             status_code=401,
@@ -88,7 +85,7 @@ def get_stock(ticker: str, token: str = Header(..., alias="Authorizatiion")) -> 
 @router.get("/history", response_model=PaginatedHistory)
 def get_history(
     params: RequestHistoryParams = Depends(),
-    token: str = Header(..., alias="Authorization"),
+    authorization: str = Header(..., alias="Authorization"),
 ) -> PaginatedHistory:
     """
     Fetch historical stock data for a given ticker symbol.
@@ -99,14 +96,7 @@ def get_history(
         PaginatedHistory: Paginated historical stock data.
     """
 
-    if not token:
-        logger.warning("Token is required for this endpoint.")
-        raise HTTPException(
-            status_code=401,
-            detail="Token is required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    if not auth.verify_token(token):
+    if not auth.verify_token(authorization):
         logger.warning("Invalid token.")
         raise HTTPException(
             status_code=401,
@@ -114,12 +104,10 @@ def get_history(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    logger.info(
-        f"Fetching closing prices for {params.ticker} over the last {params.days} days (page {params.page})"
-    )
-
     try:
-        #
+        logger.info(
+            f"Fetching closing prices for {params.ticker} over the last {params.days} days (page {params.page})"
+        )
         stock = yf.Ticker(params.ticker)
         history = stock.history(period=f"{params.days}d")
 
@@ -174,18 +162,18 @@ def get_history(
 
 @router.post("/calculation", response_model=ResponseCalculation)
 def calculate(
-    request: CalculationRequest, token: str = Header(..., alias="Authorization")
+    request: CalculationRequest, authorization: str = Header(..., alias="Authorization")
 ) -> dict:
-    if not token:
-        logger.warning("Token is required for this endpoint.")
-        raise HTTPException(
-            status_code=401,
-            detail="Token is required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
+    """
+    Perform a financial calculation based on the provided request data.
+    Args:
+        request (CalculationRequest): The calculation request data.
+        authorization (str): The access token provided in the Authorization header.
+    Returns:
+        ResponseCalculation: The result of the calculation.
+    """
     try:
-        if not auth.verify_token(token):
+        if not auth.verify_token(authorization):
             logger.warning("Invalid token.")
             raise HTTPException(
                 status_code=401,
@@ -199,7 +187,7 @@ def calculate(
             request.monthly_contribution,
             request.annual_interest,
             request.months,
-            token,
+            authorization,
         )
 
         logger.info("Calculation ended successfully.")
