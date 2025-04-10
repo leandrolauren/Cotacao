@@ -21,7 +21,7 @@ class Auth:
     This class is a singleton to ensure that only one instance is created.
     """
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if not hasattr(cls, "_instance"):
             cls._instance = super(Auth, cls).__new__(cls)
         return cls._instance
@@ -89,7 +89,7 @@ class Auth:
                 access_token, self.secret_key, algorithms=[self.algorithm]
             )
 
-            if datetime.now(tz=ZoneInfo("UTC")) > datetime.fromtimestamp(
+            if datetime.now(tz=ZoneInfo("UTC")) >= datetime.fromtimestamp(
                 payload["exp"], tz=ZoneInfo("UTC")
             ):
                 logger.warning("Token has expired")
