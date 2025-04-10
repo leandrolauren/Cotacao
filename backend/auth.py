@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -34,7 +34,7 @@ class Auth:
     def _setup(self):
         self._check_settings()
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+        self.oauth2_scheme = APIKeyHeader(name="Authorization", auto_error=False)
         self.access_token_expires_minutes = int(
             os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
         )
