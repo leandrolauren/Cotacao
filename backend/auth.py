@@ -84,30 +84,31 @@ class Auth:
         """
         Verify a JWT access token and return the payload.
         """
+
+        if access_token.startswith("Bearer "):
+            access_token = access_token.split(" ")[1]
+
         try:
             payload = jwt.decode(
                 access_token, self.secret_key, algorithms=[self.algorithm]
             )
 
-            if datetime.now(tz=ZoneInfo("UTC")) >= datetime.fromtimestamp(
-                payload["exp"], tz=ZoneInfo("UTC")
-            ):
-                logger.warning("Token has expired")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Token has expired",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            if "sub" not in payload:
-                logger.warning("Token does not contain 'sub'")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid access token",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-
-            logger.debug(f"Token verified successfully: {payload}")
             return payload
+
+        except jwt.ExpiredSignatureError:
+            logger.error("Token has expired")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except jwt.InvalidTokenError:
+            logger.error("Invalid token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         except JWTError:
             logger.error("Token verification failed")
             raise HTTPException(

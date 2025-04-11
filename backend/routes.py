@@ -17,6 +17,7 @@ from backend.models import (
     RequestHistoryParams,
     ResponseCalculation,
 )
+from backend.stock import Stock
 
 auth = Auth()
 calc = Calculation()
@@ -38,7 +39,7 @@ def get_stock(
         dict: Dictionary containing stock information.
 
     """
-
+    print(authorization)
     if not auth.verify_token(authorization):
         logger.warning("Invalid token.")
         raise HTTPException(
@@ -48,33 +49,28 @@ def get_stock(
         )
     try:
         logger.info(f"Fetching stock info for {ticker}")
-        stock = yf.Ticker(ticker)
-        info = stock.info
+        stock = Stock(ticker)
+
+        info = stock.fetch_data()
         variation = calc.calculate_variation(info)
+        info.data["variation"] = variation
+        print(info.data)
 
         if not info:
             raise HTTPException(
                 status_code=404, detail="Stock ticker not found or invalid."
             )
 
+        if not info.success:
+            raise HTTPException(
+                status_code=404,
+                detail="Stock ticker not found or invalid.",
+            )
+
         logger.info(f"Fetched stock info for {ticker}")
 
-        return {
-            "success": True,
-            "data": {
-                "Name": info.get("shortName"),
-                "P/E": info.get("trailingPE"),
-                "EBITDA": info.get("ebitda"),
-                "Gross Margin": float(info.get("grossMargins") * 100),
-                "Net Margin": float(info.get("profitMargins") * 100),
-                "Sector": info.get("sector"),
-                "Industry": info.get("industry"),
-                "Description": info.get("longBusinessSummary"),
-                "Actual Price": info.get("currentPrice"),
-                "Variation": variation,
-            },
-            "message": "Stock info fetched successfully",
-        }
+        return info
+
     except Exception as e:
         logger.error(f"Error fetching stock info for {ticker}: {str(e)}")
         raise HTTPException(

@@ -49,21 +49,14 @@ class Calculation:
             param: monthly_contribution (float): Monthly contribution amount.
             param: annual_interest (float): Annual interest rate as a percentage.
             param: months (int): Number of months for the calculation.
-            param: token (str): Authentication token.
 
         Raises:
             ValueError: If the annual interest rate is less than or equal to zero.
-            PermissionError: If the token is invalid or the user is not authenticated.
 
         Returns:
             float: The total value after the specified number of months.
         """
         try:
-            # Validate the token
-            if not auth.verify_token(token):
-                raise PermissionError(
-                    "Invalid or expired token. User not authenticated."
-                )
 
             if annual_interest <= 0:
                 raise ValueError("Interest rate must be greater than zero")
