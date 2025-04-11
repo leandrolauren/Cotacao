@@ -2,7 +2,6 @@ import logging
 import os
 import traceback
 
-import yfinance as yf
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.testclient import TestClient
@@ -12,7 +11,6 @@ from backend.calculation import Calculation
 from backend.database import Database
 from backend.models import (
     CalculationRequest,
-    HistoryRecord,
     PaginatedHistory,
     RequestHistoryParams,
     ResponseCalculation,
@@ -39,7 +37,6 @@ def get_stock(
         dict: Dictionary containing stock information.
 
     """
-    print(authorization)
     if not auth.verify_token(authorization):
         logger.warning("Invalid token.")
         raise HTTPException(
@@ -52,16 +49,17 @@ def get_stock(
         stock = Stock(ticker)
 
         info = stock.fetch_data()
-        variation = calc.calculate_variation(info)
-        info.data["variation"] = variation
-        print(info.data)
+
+        if info:
+            variation = calc.calculate_variation(info["data"])
+            info["data"]["Variation"] = variation
 
         if not info:
             raise HTTPException(
                 status_code=404, detail="Stock ticker not found or invalid."
             )
 
-        if not info.success:
+        if not info["success"]:
             raise HTTPException(
                 status_code=404,
                 detail="Stock ticker not found or invalid.",
@@ -104,46 +102,12 @@ def get_history(
         logger.info(
             f"Fetching closing prices for {params.ticker} over the last {params.days} days (page {params.page})"
         )
-        stock = yf.Ticker(params.ticker)
-        history = stock.history(period=f"{params.days}d")
+        stock = Stock(params.ticker)
+        return stock.fetch_historical_data(params.days, params.page)
 
-        if history.empty:
-            raise HTTPException(
-                status_code=404,
-                detail="No historical data found for the specified ticker and time period.",
-            )
-
-        # Pagination
-        history.reset_index(inplace=True)
-        history = history[["Date", "Close"]]
-        page_size = 100
-        start = (params.page - 1) * page_size
-        end = start + page_size
-
-        paginated_history = history.iloc[start:end]
-        if paginated_history.empty:
-            raise HTTPException(
-                status_code=404, detail="No data available for the requested page."
-            )
-
-        records = [
-            HistoryRecord(date=row["Date"].strftime("%Y-%m-%d"), close=row["Close"])
-            for _, row in paginated_history.iterrows()
-        ]
-
-        logger.info(f"Fetched closing prices for {params.ticker} (page {params.page})")
-
-        return PaginatedHistory(
-            success=True,
-            pagination={
-                "current_page": params.page,
-                "page_size": page_size,
-                "total_pages": (len(history) + page_size - 1) // page_size,
-                "total_records": len(history),
-            },
-            data=records,
-            message="Historical data fetched successfully.",
-        )
+    except ValueError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=422, detail=str(e))
 
     except HTTPException as e:
         logger.error(f"HTTP Error: {e.detail}")
@@ -183,7 +147,6 @@ def calculate(
             request.monthly_contribution,
             request.annual_interest,
             request.months,
-            authorization,
         )
 
         logger.info("Calculation ended successfully.")

@@ -40,7 +40,6 @@ class Calculation:
         monthly_contribution: float,
         annual_interest: float,
         number_months: int,
-        token: str,
     ) -> float:
         """_summary_
 
@@ -110,9 +109,9 @@ class Calculation:
             raise ValueError("info must be a dictionary")
 
         try:
-            price_before = info.get("previousClose")
-            actual_price = info.get("regularMarketPrice")
-            short_name = info.get("shortName", "Unknown")
+            price_before = info.get("Previous Close")
+            actual_price = info.get("Regular Market Price")
+            short_name = info.get("Name", "Unknown")
             logger.info(
                 f"Calculating variation for {short_name}. Previous Close: {price_before}, Regular Market Price: {actual_price}"
             )

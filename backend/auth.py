@@ -102,7 +102,7 @@ class Auth:
                 detail="Token has expired",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        except jwt.InvalidTokenError:
+        except jwt.JWTClaimsError:
             logger.error("Invalid token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
