@@ -192,7 +192,7 @@ def get_token(token: str = Depends(auth.oauth2_scheme)):
                 headers={"WWW-Authenticate": "Bearer"},
             )
         logger.info("Access token verified successfully.")
-        return {"token": token, "user": payload["sub"]}
+        return {"success": True, "token": token, "user": payload["sub"]}
     except HTTPException as e:
         logger.error(f"HTTP Error during token verification: {e.detail}")
         raise e
@@ -225,7 +225,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         access_token = auth.create_access_token(data={"sub": user["email"]})
         logger.info(f"User {form_data.username} logged in successfully.")
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        return {"sucess": True, "access_token": access_token, "token_type": "bearer"}
     except HTTPException as e:
         logger.error(f"HTTP Error during login: {e.detail}")
         raise e
@@ -263,7 +263,7 @@ async def register(form_data: OAuth2PasswordRequestForm = Depends()):
         db.user_register(form_data.username, form_data.password)
         logger.info(f"User {form_data.username} registered successfully.")
 
-        return {"message": "User registered successfully."}
+        return {"success": True, "message": "User registered successfully."}
     except HTTPException as e:
         logger.error(f"HTTP Error during registration: {e.detail}")
         raise e
