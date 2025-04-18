@@ -85,7 +85,7 @@ class Auth:
         Verify a JWT access token and return the payload.
         """
 
-        if access_token.startswith("Bearer "):
+        if access_token.lower().startswith("bearer "):
             access_token = access_token.split(" ")[1]
 
         try:

@@ -13,5 +13,8 @@
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "prettier.singleQuote": true,
   "prettier.trailingComma": "all",
-  "prettier.semi": false
+  "prettier.semi": false,
+  "python.testing.unittestArgs": ["-v", "-s", ".", "-p", "*_test.py"],
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true
 }

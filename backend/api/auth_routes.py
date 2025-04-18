@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
 from backend.core.auth import Auth
+
+# from backend.core.captcha import verify_recaptcha
 from backend.core.database import Database
 
 auth = Auth()
@@ -43,12 +45,51 @@ def get_token(token: str = Depends(auth.oauth2_scheme)):
         )
 
 
+@auth_router.post("/refresh")
+async def refresh_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """
+    Endpoint to refresh the access token using a refresh token.
+    """
+    logger.info("Refreshing access token.")
+    try:
+        refresh_token = form_data.password
+
+        # Verify the refresh token
+        payload = auth.verify_token(refresh_token)
+        if not payload:
+            logger.warning("Invalid refresh token.")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid refresh token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Generate a new access token
+        user_email = payload["sub"]
+        access_token = auth.create_access_token(data={"sub": user_email})
+        logger.info(f"Access token refreshed successfully for user: {user_email}")
+
+        return {"success": True, "access_token": access_token, "token_type": "bearer"}
+    except HTTPException as e:
+        logger.error(f"HTTP Error during token refresh: {e.detail}")
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error during token refresh: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500, detail="An error occurred while refreshing the token."
+        )
+
+
 @auth_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Endpoint for user login, returning an access token.
+    Uses the 'client_secret' field of the form to pass the CAPTCHA token.
     """
     logger.info(f"User login attempt: {form_data.username}")
+    # if not verify_recaptcha(form_data.client_secret):
+    #     logger.warning("CAPTCHA verification failed.")
+    #     raise HTTPException(status_code=400, detail="CAPTCHA verification failed.")
     try:
         user = db.get_user_from_db(form_data.username)
 
@@ -78,8 +119,14 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def register(form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Endpoint for user registration.
+    Uses the 'client_secret' field of the form to pass the CAPTCHA token.
     """
     logger.info(f"User registration attempt: {form_data.username}")
+
+    # if not verify_recaptcha(form_data.client_secret):
+    #     logger.warning("CAPTCHA verification failed.")
+    #     raise HTTPException(status_code=400, detail="CAPTCHA verification failed.")
+
     try:
 
         if not form_data.username or not form_data.password:
