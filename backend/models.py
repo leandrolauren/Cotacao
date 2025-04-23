@@ -118,7 +118,7 @@ class Connection(object):
             if not os.getenv(var):
                 raise ValueError(f"Environment variable {var} is not set.")
 
-    def execute(self, query, params=None):
+    def execute(self, query: str, params=None):
         self.cursor.execute(query, params or ())
 
         if query.strip().lower().startswith("select"):
@@ -131,6 +131,29 @@ class Connection(object):
 
     def rollback(self):
         self.conn.rollback()
+
+
+class DownloadRequest(BaseModel):
+    """
+        Media download request scheme.
+
+    Attributes:
+        url (str): YouTube video URL.
+        download_type (str): Download type ('video' or 'audio').
+        download_path (str): Path to save the downloaded file.
+        resolution (Optional[str]): Video resolution (default "maximum"). Applicable only for video downloads.
+    """
+
+    url: str = Field(..., example="https://www.youtube.com/watch?v=EXEMPLO")
+    download_type: str = Field(
+        ..., example="video", description="Download Type: 'video' or 'audio'."
+    )
+    download_path: str = Field(
+        ..., example="videos_downloads", description="Path to save download."
+    )
+    resolution: Optional[str] = Field(
+        "highest", example="highest", description="Video resolution, if applicable."
+    )
 
 
 if __name__ == "__main__":
