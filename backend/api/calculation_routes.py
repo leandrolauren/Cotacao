@@ -5,14 +5,16 @@ from fastapi import APIRouter, Header, HTTPException
 
 from backend.core.auth import Auth
 from backend.core.calculation import Calculation
+from backend.core.database import Database
 from backend.models import CalculationRequest, ResponseCalculation
 
 calc = Calculation()
+db = Database()
 auth = Auth()
 
 logger = logging.getLogger(__name__)
 
-calculation_router = APIRouter()
+calculation_router = APIRouter(tags=["Calculation"])
 
 
 @calculation_router.post("/calculation", response_model=ResponseCalculation)
@@ -28,7 +30,7 @@ def calculate(
         ResponseCalculation: The result of the calculation.
     """
     try:
-        if not auth.verify_token(authorization):
+        if not auth.verify_token(access_token=authorization, db_instance=db):
             logger.warning("Invalid token.")
             raise HTTPException(
                 status_code=401,
