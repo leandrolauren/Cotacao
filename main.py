@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.api.auth_routes import auth_router
 from backend.api.calculation_routes import calculation_router
 from backend.api.stock_routes import stock_router
-from backend.api.youtube_route import youtube_router
+from backend.api.youtube_routes import youtube_router
 
 sp_timezone = ZoneInfo("America/Sao_Paulo")
 
