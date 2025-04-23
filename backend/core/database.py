@@ -22,8 +22,17 @@ class Database:
         return cls._instance
 
     def __init__(self):
-        if not hasattr(self, "_initialized"):
-            self._initialized = True
+        self.auth = None
+        self._initialize_auth()
+
+    def _initialize_auth(self):
+        try:
+            self.auth = Auth()
+        except Exception as e:
+            logger.error(f"Error initializing authentication: {e}")
+            raise HTTPException(
+                status_code=500, detail="Error initializing authentication."
+            ) from e
 
     def create_table(self) -> Dict[str, Any]:
         """
@@ -85,7 +94,26 @@ class Database:
 
     def get_user_from_db(self, email: str) -> dict:
         """
-        Fetch user details from the database.
+        This method queries the database to retrieve user information such as email,
+        password hash, and active status. It logs the process and handles exceptions
+        that may occur during the database operation.
+
+        Args:
+                - email (str): User email from login.
+        Returns:
+                - success (bool): Indicates whether the user was successfully found.
+                - email (str, optional): The email of the user (if found).
+                - password_hash (str, optional): The hashed password of the user (if found).
+                - is_active (bool, optional): The active status of the user (if found).
+                - message (str, optional): An error or informational message (if the user was not found).
+            HTTPException: If an error occurs during the database query, an HTTP 500 exception
+            is raised with a relevant error message.
+        Logging:
+                - The start of the user fetch operation.
+                - Whether the user was found or not.
+                - Any errors encountered during the database query.
+                - Completion of the user fetch operation.
+
         """
         try:
             logger.info(f"Fetching user with email: {email}")
@@ -124,8 +152,7 @@ class Database:
         """
         Register a new user in the database.
         """
-        auth = Auth()
-        hashed_password = auth.get_password_hash(password)
+        hashed_password = self.auth.get_password_hash(password)
         sql_query = (
             "INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id"
         )
