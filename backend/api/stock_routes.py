@@ -5,15 +5,17 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 
 from backend.core.auth import Auth
 from backend.core.calculation import Calculation
+from backend.core.database import Database
 from backend.core.stock import Stock
 from backend.models import PaginatedHistory, RequestHistoryParams
 
 auth = Auth()
 calc = Calculation()
+db = Database()
 
 logger = logging.getLogger(__name__)
 
-stock_router = APIRouter()
+stock_router = APIRouter(tags=["Stock"])
 
 
 @stock_router.get("/stock/{ticker}")
@@ -27,7 +29,7 @@ def get_stock(
         dict: Dictionary containing stock information.
 
     """
-    if not auth.verify_token(authorization):
+    if not auth.verify_token(access_token=authorization, db_instance=db):
         logger.warning("Invalid token.")
         raise HTTPException(
             status_code=401,
@@ -74,7 +76,7 @@ def get_history(
         PaginatedHistory: Paginated historical stock data.
     """
 
-    if not auth.verify_token(authorization):
+    if not auth.verify_token(access_token=authorization, db_instance=db):
         logger.warning("Invalid token.")
         raise HTTPException(
             status_code=401,
