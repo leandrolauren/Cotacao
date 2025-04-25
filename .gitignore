@@ -9,6 +9,7 @@ obj/
 .config/
 node_modules
 ngrok.exe
+__pycache__/
 
 # dependencies
 /.pnp
