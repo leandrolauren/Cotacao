@@ -88,10 +88,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     logger.info(f"User login attempt: {form_data.username}")
 
     try:
-        user = db.get_user_from_db(form_data.username)
+        user = db.get_user_from_db(email=form_data.username)
 
         if not user or not auth.verify_password(
-            form_data.password, user["password_hash"]
+            plain_password=form_data.password, hashed_password=user["password_hash"]
         ):
             logger.warning(f"Invalid login attempt for user: {form_data.username}")
             raise HTTPException(
@@ -105,8 +105,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             "email": user["email"],
             "password_hash": user["password_hash"],
         }
-        print(f"data: {data}")
-        access_token = auth.create_access_token(data, encrypt_sensitive_data=True)
+
+        access_token = auth.create_access_token(data=data, encrypt_sensitive_data=True)
 
         logger.info(f"User {form_data.username} logged in successfully.")
 
@@ -138,7 +138,7 @@ async def register(form_data: OAuth2PasswordRequestForm = Depends()):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        user = db.get_user_from_db(form_data.username)
+        user = db.get_user_from_db(email=form_data.username)
 
         if user.get("success"):
             logger.warning(f"User {form_data.username} already exists.")
@@ -148,7 +148,7 @@ async def register(form_data: OAuth2PasswordRequestForm = Depends()):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        db.user_register(form_data.username, form_data.password)
+        db.user_register(email=form_data.username, password=form_data.password)
         logger.info(f"User {form_data.username} registered successfully.")
 
         return {"success": True, "message": "User registered successfully."}
