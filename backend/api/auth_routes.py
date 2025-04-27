@@ -90,7 +90,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     try:
         result = db.get_user_from_db(email=form_data.username)
 
-        if not result.get("success") or not result.get("data"):
+        if not result.get("success"):
             logger.warning(f"User {form_data.username} not found or invalid data.")
             raise HTTPException(
                 status_code=400,
