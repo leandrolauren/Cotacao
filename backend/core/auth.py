@@ -79,7 +79,7 @@ class Auth:
 
         f = Fernet(self.secret_key)
 
-        encrypted_data = f.encrypt(data.encode())
+        encrypted_data = f.encrypt(data=data.encode())
 
         return encrypted_data.decode()
 
@@ -94,10 +94,10 @@ class Auth:
         if not self.secret_key:
             raise ValueError("SECRET_KEY is not set. Cannot decrypt data.")
 
-        f = Fernet(self.secret_key)
+        f = Fernet(key=self.secret_key)
 
         try:
-            decrypted_data = f.decrypt(encrypted_data).decode()
+            decrypted_data = f.decrypt(token=encrypted_data).decode()
             return decrypted_data
 
         except InvalidToken:
@@ -108,13 +108,13 @@ class Auth:
         """
         Verify a plain password against its hashed version.
         """
-        return self.pwd_context.verify(plain_password, hashed_password)
+        return self.pwd_context.verify(secret=plain_password, hash=hashed_password)
 
     def get_password_hash(self, password: str) -> str:
         """
         Hash a plain password.
         """
-        return self.pwd_context.hash(password)
+        return self.pwd_context.hash(secret=password)
 
     def create_access_token(
         self, data: dict, encrypt_sensitive_data: bool = False
@@ -140,7 +140,9 @@ class Auth:
         to_encode.update({"exp": expire.timestamp()})
         logger.debug(f"Creating access token with data: {to_encode}")
 
-        return jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+        return jwt.encode(
+            claims=to_encode, key=self.secret_key, algorithm=self.algorithm
+        )
 
     def verify_token(self, access_token: str, db_instance) -> dict:
         """
@@ -156,7 +158,7 @@ class Auth:
 
         try:
             payload = jwt.decode(
-                access_token, self.secret_key, algorithms=[self.algorithm]
+                token=access_token, key=self.secret_key, algorithms=[self.algorithm]
             )
 
             # Check expiration
@@ -171,7 +173,7 @@ class Auth:
                 )
 
             if "email" in payload:
-                email = self._decrypt_data(payload["email"])
+                email = self._decrypt_data(encrypted_data=payload["email"])
 
             if "password_hash" in payload:
                 password_token = payload.get("password_hash")
