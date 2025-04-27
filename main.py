@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.api.auth_routes import auth_router
 from backend.api.calculation_routes import calculation_router
 from backend.api.stock_routes import stock_router
-from backend.api.youtube_routes import youtube_router
 
 sp_timezone = ZoneInfo("America/Sao_Paulo")
 
@@ -31,7 +30,6 @@ app = FastAPI(title="API Cotacao", version="1.0.0")
 app.include_router(stock_router)
 app.include_router(calculation_router)
 app.include_router(auth_router)
-app.include_router(youtube_router)
 
 app.add_middleware(
     CORSMiddleware,
