@@ -209,12 +209,16 @@ class Database:
         )
         try:
             with Connection() as conn:
-                response = conn.execute(
-                    query=sql_query, params=(email, hashed_password)
+                conn.execute(
+                    query=sql_query,
+                    params=(
+                        email,
+                        hashed_password,
+                    ),
                 )
                 return {
                     "success": True,
-                    "message": f"User registered successfully, {response[0]} created",
+                    "message": f"User registered successfully",
                 }
 
         except ValueError as ve:
