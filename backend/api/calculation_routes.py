@@ -40,10 +40,10 @@ def calculate(
 
         logger.info(f"Starting calculation: {dict(request)}")
         total_value, amount_invested, total_interest, months = calc.calculate_totals(
-            request.initial_value,
-            request.monthly_contribution,
-            request.annual_interest,
-            request.months,
+            initial_value=request.initial_value,
+            monthly_contribution=request.monthly_contribution,
+            annual_interest=request.annual_interest,
+            number_months=request.months,
         )
 
         logger.info("Calculation ended successfully.")
