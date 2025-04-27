@@ -91,6 +91,8 @@ class Connection(object):
                 port=os.getenv("DB_PORT"),
             )
             self.cursor = self.conn.cursor()
+            self.conn.autocommit = False
+            self.cursor.execute("BEGIN TRANSACTION;")
 
         except pg.Error as e:
             raise ConnectionError(f"Error connecting to the database: {e}")
@@ -131,33 +133,3 @@ class Connection(object):
 
     def rollback(self):
         self.conn.rollback()
-
-
-class DownloadRequest(BaseModel):
-    """
-        Media download request scheme.
-
-    Attributes:
-        url (str): YouTube video URL.
-        download_type (str): Download type ('video' or 'audio').
-        download_path (str): Path to save the downloaded file.
-        resolution (Optional[str]): Video resolution (default "maximum"). Applicable only for video downloads.
-    """
-
-    url: str = Field(..., example="https://www.youtube.com/watch?v=EXEMPLO")
-    download_type: str = Field(
-        ..., example="video", description="Download Type: 'video' or 'audio'."
-    )
-    download_path: str = Field(
-        ..., example="videos_downloads", description="Path to save download."
-    )
-    resolution: Optional[str] = Field(
-        "highest", example="highest", description="Video resolution, if applicable."
-    )
-
-
-if __name__ == "__main__":
-    with Connection() as conn:
-        result = conn.execute("select * from confirmations")
-        print(hex(id(conn)))
-        print(result)
