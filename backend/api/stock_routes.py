@@ -36,9 +36,12 @@ def get_stock(
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if not ticker:
+        logger.error("Ticker symbol is required.")
+        raise HTTPException(status_code=422, detail="Ticker symbol is required.")
     try:
         logger.info(f"Fetching stock info for {ticker}")
-        stock = Stock(ticker)
+        stock = Stock(symbol=ticker)
 
         info = stock.fetch_data()
 
@@ -88,7 +91,7 @@ def get_history(
         logger.info(
             f"Fetching historical data for {params.ticker} over the last {params.days} days (page {params.page})"
         )
-        stock = Stock(params.ticker)
+        stock = Stock(symbol=params.ticker)
         return stock.fetch_historical_data(params.days, params.page)
 
     except ValueError as e:
