@@ -88,10 +88,18 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     logger.info(f"User login attempt: {form_data.username}")
 
     try:
-        user = db.get_user_from_db(email=form_data.username)
+        result = db.get_user_from_db(email=form_data.username)
 
-        if not user or not auth.verify_password(
-            plain_password=form_data.password, hashed_password=user["password_hash"]
+        if not result.get("success") or not result.get("data"):
+            logger.warning(f"User {form_data.username} not found or invalid data.")
+            raise HTTPException(
+                status_code=400,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if not auth.verify_password(
+            plain_password=form_data.password, hashed_password=result["password_hash"]
         ):
             logger.warning(f"Invalid login attempt for user: {form_data.username}")
             raise HTTPException(
@@ -100,13 +108,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        data = {
-            "sub": user["email"],
-            "email": user["email"],
-            "password_hash": user["password_hash"],
-        }
-
-        access_token = auth.create_access_token(data=data, encrypt_sensitive_data=True)
+        access_token = auth.create_access_token(
+            data={"sub": result["email"], "email": result["email"]},
+            encrypt_sensitive_data=True,
+        )
 
         logger.info(f"User {form_data.username} logged in successfully.")
 
