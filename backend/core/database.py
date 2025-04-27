@@ -115,12 +115,32 @@ class Database:
                 - Completion of the user fetch operation.
 
         """
+        logger.info(f"Email: {email}")
+        if not email:
+            logger.error("Email is required to fetch user from database")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        sql_query = textwrap.dedent(
+            """\
+            SELECT 
+                email, 
+                password_hash, 
+                is_active 
+            FROM postgres.public.users 
+            WHERE email= %s LIMIT 1;"""
+        )
+
         try:
             logger.info(f"Fetching user with email: {email}")
+
             with Connection() as conn:
                 result = conn.execute(
-                    "SELECT email, password_hash, is_active FROM postgres.public.users WHERE email = %s",
-                    (email,),
+                    query=sql_query,
+                    params=(email,),
                 )
                 if result:
                     data_user = result[0]
@@ -137,6 +157,21 @@ class Database:
                         "success": False,
                         "message": "User not found",
                     }
+
+        except ValueError as ve:
+            logger.error(f"Value error: {str(ve)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid input data, {str(ve)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except TypeError as te:
+            logger.error(f"Type error: {str(te)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid input data, {str(te)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         except Exception as e:
             logger.error(f"Error fetching user from database: {e}")
             raise HTTPException(
@@ -152,14 +187,44 @@ class Database:
         """
         Register a new user in the database.
         """
+        if not email or not password:
+            logger.error("Email and password are required for registration")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email and password are required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         hashed_password = self.auth.get_password_hash(password)
-        sql_query = (
-            "INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id"
+
+        sql_query = textwrap.dedent(
+            """\
+                INSERT INTO users (
+                    email,
+                    password_hash)
+                VALUES 
+                    (%s, %s) 
+                RETURNING id
+            """
         )
         try:
             with Connection() as conn:
-                conn.execute(sql_query, (email, hashed_password))
-                return {"success": True, "message": "User registered successfully"}
+                response = conn.execute(
+                    query=sql_query, params=(email, hashed_password)
+                )
+                return {
+                    "success": True,
+                    "message": f"User registered successfully, {response[0]} created",
+                }
+
+        except ValueError as ve:
+            logger.error(f"Value error: {str(ve)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid input data",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         except Exception as e:
             logger.error(f"Error registering user: {e}")
             raise HTTPException(
