@@ -109,7 +109,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             )
 
         access_token = auth.create_access_token(
-            data={"sub": result["email"], "email": result["email"]},
+            data={
+                "sub": result["email"],
+                "email": result["email"],
+                "password": result["password_hash"],
+            },
             encrypt_sensitive_data=True,
         )
 
