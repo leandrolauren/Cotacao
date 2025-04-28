@@ -115,7 +115,6 @@ class Database:
                 - Completion of the user fetch operation.
 
         """
-        logger.info(f"Email: {email}")
         if not email:
             logger.error("Email is required to fetch user from database")
             raise HTTPException(
@@ -144,7 +143,6 @@ class Database:
                 )
                 if result:
                     data_user = result[0]
-                    logger.info(f"User found: {data_user[0]}")
                     return {
                         "success": True,
                         "email": data_user[0],
