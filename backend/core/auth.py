@@ -131,7 +131,7 @@ class Auth:
 
         if encrypt_sensitive_data:
             for key, value in to_encode.items():
-                if key in ["email", "password"]:
+                if key in ["email", "password", "password_hash"]:
                     to_encode[key] = self._encrypt_data(value)
 
         expire = datetime.now(tz=ZoneInfo("UTC")) + timedelta(
@@ -158,7 +158,7 @@ class Auth:
 
         try:
             payload = jwt.decode(
-                token=access_token, key=self.secret_key, algorithms=[self.algorithm]
+                access_token, self.secret_key, algorithms=[self.algorithm]
             )
 
             # Check expiration
@@ -175,8 +175,8 @@ class Auth:
             if "email" in payload:
                 email = self._decrypt_data(encrypted_data=payload["email"])
 
-            if "password_hash" in payload:
-                password_token = payload.get("password_hash")
+            if "password" in payload:
+                password_token = self._decrypt_data(encrypted_data=payload["password"])
 
             if not email or not password_token:
                 logger.error("Token does not contain email or password")
