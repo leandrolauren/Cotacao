@@ -11,8 +11,6 @@ from fastapi.security import APIKeyHeader
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-from backend.core.database import Database
-
 logger = logging.getLogger(__name__)
 
 load_dotenv(override=True)
@@ -52,8 +50,6 @@ class Auth:
         if not any(char.isalnum() for char in self.secret_key):
             logger.error("SECRET_KEY must contain alphanumeric characters.")
             raise ValueError("SECRET_KEY must contain alphanumeric characters.")
-
-        self.db = Database()
 
     def _check_settings(self):
         """
@@ -148,11 +144,12 @@ class Auth:
             claims=to_encode, key=self.secret_key, algorithm=self.algorithm
         )
 
-    def verify_token(self, access_token: str) -> dict:
+    def verify_token(self, access_token: str, db_instance: any) -> dict:
         """
         Verify a JWT access token and return the payload.
         Args:
             access_token (str): The JWT token to verify.
+            db_instance: The database instance to validate user credentials.
         Returns:
             dict: The decoded payload if the token is valid.
         """
@@ -189,7 +186,7 @@ class Auth:
                     headers={"WWW-Authenticate": "Bearer"},
                 )
 
-            user_db = self.db.get_user_from_db(email)
+            user_db = db_instance.get_user_from_db(email)
 
             if not user_db or password_token != user_db.get("password_hash"):
                 logger.error("Invalid username or password in token")
