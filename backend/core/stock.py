@@ -56,7 +56,7 @@ class Stock:
             raise ValueError(f"Error fetching data for {self.symbol}: {str(e)}")
 
     def fetch_historical_data(
-        self, days: int, page: int, page_size: int = 100
+        self, days: int, page: int, page_size: int = 365
     ) -> PaginatedHistory:
         """
         Fetch historical stock data and paginate the results.
