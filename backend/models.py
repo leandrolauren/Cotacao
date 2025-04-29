@@ -34,8 +34,8 @@ class RequestHistoryParams(BaseModel):
     days: int = Field(
         ...,
         gt=0,
-        le=365,
-        description="Number of days for consulting the history of the stock (between 1 and 365)",
+        le=1825,
+        description="Number of days for consulting the history of the stock (between 1 and 1825)",
     )
 
     page: int = Field(
