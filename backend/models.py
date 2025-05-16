@@ -73,15 +73,7 @@ load_dotenv()
 
 
 class Connection(object):
-
-    def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, "_instance"):
-            cls._instance = super(Connection, cls).__new__(cls)
-        return cls._instance
-
     def __init__(self):
-        self.__check_var()
-
         try:
             self.conn = pg.connect(
                 dbname=os.getenv("DB_NAME"),
@@ -113,13 +105,6 @@ class Connection(object):
         if self.conn:
             self.conn.close()
 
-    def __check_var(self):
-        required_vars = ["DB_NAME", "DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT"]
-
-        for var in required_vars:
-            if not os.getenv(var):
-                raise ValueError(f"Environment variable {var} is not set.")
-
     def execute(self, query: str, params=None):
         self.cursor.execute(query, params or ())
 
@@ -133,3 +118,7 @@ class Connection(object):
 
     def rollback(self):
         self.conn.rollback()
+
+    def close(self):
+        self.cursor.close()
+        self.conn.close()
