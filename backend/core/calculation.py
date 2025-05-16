@@ -1,9 +1,5 @@
 import logging
 
-from backend.core.auth import Auth
-
-auth = Auth()
-
 logger = logging.getLogger(__name__)
 
 
@@ -88,10 +84,6 @@ class Calculation:
                 )
 
             return total_value, amount_invested, total_interest, months
-
-        except PermissionError as e:
-            logger.error(f"Authentication error: {str(e)}")
-            raise
 
         except Exception as e:
             logger.error(f"Error in calculate_interest: {str(e)}")
