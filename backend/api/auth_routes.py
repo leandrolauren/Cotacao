@@ -5,10 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
 from backend.core.auth import Auth
-from backend.core.database import Database
 
 auth = Auth()
-db = Database()
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ def get_token(token: str = Depends(auth.oauth2_scheme)):
     """
     logger.info("Verifying access token.")
     try:
-        payload = auth.verify_token(access_token=token, db_instance=db)
+        payload = auth.verify_token(access_token=token)
 
         if not payload:
             logger.warning("Invalid access token.")
@@ -53,7 +52,7 @@ async def refresh_token(form_data: OAuth2PasswordRequestForm = Depends()):
         refresh_token = form_data.password
 
         # Verify the refresh token
-        payload = auth.verify_token(access_token=refresh_token, db_instance=db)
+        payload = auth.verify_token(access_token=refresh_token)
         if not payload:
             logger.warning("Invalid refresh token.")
             raise HTTPException(
@@ -88,6 +87,9 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     logger.info(f"User login attempt: {form_data.username}")
 
     try:
+        from backend.core.database import Database
+
+        db = Database()
         result = db.get_user_from_db(email=form_data.username)
 
         if not result.get("success"):
@@ -147,6 +149,9 @@ async def register(form_data: OAuth2PasswordRequestForm = Depends()):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        from backend.core.database import Database
+
+        db = Database()
         user = db.get_user_from_db(email=form_data.username)
 
         if user.get("success"):
