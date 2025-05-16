@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend import db_connection
 from backend.api.auth_routes import auth_router
 from backend.api.calculation_routes import calculation_router
 from backend.api.stock_routes import stock_router
@@ -38,6 +39,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("shutdown")
+def shutdown_event():
+    """
+    Event handler for application shutdown.
+    Closes the database connection.
+    """
+    logging.info("Shutting down the application.")
+    db_connection.__exit__(None, None, None)
+    logging.info("Database connection closed.")
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
