@@ -3,14 +3,7 @@ import traceback
 
 from fastapi import APIRouter, Header, HTTPException
 
-from backend.core.auth import Auth
-from backend.core.calculation import Calculation
-from backend.core.database import Database
 from backend.models import CalculationRequest, ResponseCalculation
-
-calc = Calculation()
-db = Database()
-auth = Auth()
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +23,10 @@ def calculate(
         ResponseCalculation: The result of the calculation.
     """
     try:
-        if not auth.verify_token(access_token=authorization, db_instance=db):
+        from backend.core.auth import Auth
+
+        auth = Auth()
+        if not auth.verify_token(access_token=authorization):
             logger.warning("Invalid token.")
             raise HTTPException(
                 status_code=401,
@@ -39,6 +35,10 @@ def calculate(
             )
 
         logger.info(f"Starting calculation: {dict(request)}")
+
+        from backend.core.calculation import Calculation
+
+        calc = Calculation()
         total_value, amount_invested, total_interest, months = calc.calculate_totals(
             initial_value=request.initial_value,
             monthly_contribution=request.monthly_contribution,
