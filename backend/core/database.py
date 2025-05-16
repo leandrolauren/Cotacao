@@ -4,8 +4,7 @@ from typing import Any, Dict
 
 from fastapi import HTTPException, status
 
-from backend.core.auth import Auth
-from backend.models import Connection
+from backend import db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -13,26 +12,7 @@ logger = logging.getLogger(__name__)
 class Database:
     """
     Database class to handle database-related tasks.
-    This class is a singleton to ensure that only one instance is created.
     """
-
-    def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, "_instance"):
-            cls._instance = super(Database, cls).__new__(cls)
-        return cls._instance
-
-    def __init__(self):
-        self.auth = None
-        self._initialize_auth()
-
-    def _initialize_auth(self):
-        try:
-            self.auth = Auth()
-        except Exception as e:
-            logger.error(f"Error initializing authentication: {e}")
-            raise HTTPException(
-                status_code=500, detail="Error initializing authentication."
-            ) from e
 
     def create_table(self) -> Dict[str, Any]:
         """
@@ -72,8 +52,7 @@ class Database:
         )
 
         try:
-            with Connection() as conn:
-                conn.execute(sql_query)
+            db_connection.execute(sql_query)
 
             logger.info("Table created/verified successfully")
             return {
@@ -136,25 +115,24 @@ class Database:
         try:
             logger.info(f"Fetching user with email: {email}")
 
-            with Connection() as conn:
-                result = conn.execute(
-                    query=sql_query,
-                    params=(email,),
-                )
-                if result:
-                    data_user = result[0]
-                    return {
-                        "success": True,
-                        "email": data_user[0],
-                        "password_hash": data_user[1],
-                        "is_active": data_user[2],
-                    }
-                else:
-                    logger.info(f"No user found with email: {email}")
-                    return {
-                        "success": False,
-                        "message": "User not found",
-                    }
+            result = db_connection.execute(
+                query=sql_query,
+                params=(email,),
+            )
+            if result:
+                data_user = result[0]
+                return {
+                    "success": True,
+                    "email": data_user[0],
+                    "password_hash": data_user[1],
+                    "is_active": data_user[2],
+                }
+            else:
+                logger.info(f"No user found with email: {email}")
+                return {
+                    "success": False,
+                    "message": "User not found",
+                }
 
         except ValueError as ve:
             logger.error(f"Value error: {str(ve)}")
@@ -192,8 +170,10 @@ class Database:
                 detail="Email and password are required",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        from backend.core.auth import Auth
 
-        hashed_password = self.auth.get_password_hash(password)
+        auth = Auth()
+        hashed_password = auth.get_password_hash(password)
 
         sql_query = textwrap.dedent(
             """\
@@ -206,18 +186,17 @@ class Database:
             """
         )
         try:
-            with Connection() as conn:
-                conn.execute(
-                    query=sql_query,
-                    params=(
-                        email,
-                        hashed_password,
-                    ),
-                )
-                return {
-                    "success": True,
-                    "message": f"User registered successfully",
-                }
+            db_connection.execute(
+                query=sql_query,
+                params=(
+                    email,
+                    hashed_password,
+                ),
+            )
+            return {
+                "success": True,
+                "message": f"User registered successfully",
+            }
 
         except ValueError as ve:
             logger.error(f"Value error: {str(ve)}")
