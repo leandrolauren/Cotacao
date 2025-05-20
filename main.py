@@ -48,7 +48,7 @@ def shutdown_event():
     Closes the database connection.
     """
     logging.info("Shutting down the application.")
-    db_connection.__exit__(None, None, None)
+    db_connection.close()
     logging.info("Database connection closed.")
 
 
