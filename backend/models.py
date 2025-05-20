@@ -90,6 +90,9 @@ class Connection(object):
             raise ConnectionError(f"Error connecting to the database: {e}")
 
     def execute(self, query: str, params=None):
+        if self.cursor.closed:
+            self.cursor = self.conn.cursor()
+
         self.cursor.execute(query, params or ())
 
         if query.strip().lower().startswith("select"):
