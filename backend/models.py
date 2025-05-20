@@ -89,22 +89,6 @@ class Connection(object):
         except pg.Error as e:
             raise ConnectionError(f"Error connecting to the database: {e}")
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is not None:
-            self.conn.rollback()
-
-        else:
-            self.conn.commit()
-
-        if self.cursor:
-            self.cursor.close()
-
-        if self.conn:
-            self.conn.close()
-
     def execute(self, query: str, params=None):
         self.cursor.execute(query, params or ())
 
@@ -120,5 +104,7 @@ class Connection(object):
         self.conn.rollback()
 
     def close(self):
-        self.cursor.close()
-        self.conn.close()
+        if self.cursor and not self.cursor.closed:
+            self.cursor.close()
+        if self.conn and not self.conn.closed:
+            self.conn.close()
