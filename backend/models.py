@@ -74,20 +74,19 @@ load_dotenv()
 
 class Connection(object):
     def __init__(self):
-        try:
-            self.conn = pg.connect(
-                dbname=os.getenv("DB_NAME"),
-                user=os.getenv("DB_USER"),
-                password=os.getenv("DB_PASSWORD"),
-                host=os.getenv("DB_HOST"),
-                port=os.getenv("DB_PORT"),
-            )
-            self.cursor = self.conn.cursor()
-            self.conn.autocommit = False
-            self.cursor.execute("BEGIN TRANSACTION;")
+        self._connect()
 
-        except pg.Error as e:
-            raise ConnectionError(f"Error connecting to the database: {e}")
+        def _connect(self):
+            if not hasattr(self, "conn") or self.conn is None or self.conn.closed:
+                self.conn = pg.connect(
+                    dbname=os.getenv("DB_NAME"),
+                    user=os.getenv("DB_USER"),
+                    password=os.getenv("DB_PASSWORD"),
+                    host=os.getenv("DB_HOST"),
+                    port=os.getenv("DB_PORT"),
+                )
+                self.cursor = self.conn.cursor()
+                self.conn.autocommit = False
 
     def execute(self, query: str, params=None):
         if self.cursor.closed:
