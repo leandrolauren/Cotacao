@@ -74,10 +74,12 @@ load_dotenv()
 
 class Connection(object):
     def __init__(self):
+        self.conn = None
+        self.cursor = None
         self._connect()
 
     def _connect(self):
-        if not hasattr(self, "conn") or self.conn is None or self.conn.closed:
+        if self.conn is None or self.conn.closed:
             self.conn = pg.connect(
                 dbname=os.getenv("DB_NAME"),
                 user=os.getenv("DB_USER"),
@@ -87,22 +89,42 @@ class Connection(object):
             )
             self.cursor = self.conn.cursor()
             self.conn.autocommit = False
-
-    def execute(self, query: str, params=None):
-        if self.cursor.closed:
+        elif self.cursor is None or self.cursor.closed:
             self.cursor = self.conn.cursor()
 
-        self.cursor.execute(query, params or ())
+    def execute(self, query: str, params=None):
+        try:
+            self._connect()
+            self.cursor.execute(query, params or ())
+            if query.strip().lower().startswith("select"):
+                return self.cursor.fetchall()
+            elif (
+                query.strip().lower().startswith("insert")
+                and "returning" in query.lower()
+            ):
+                return self.cursor.fetchone()
+            else:
+                return self.cursor.rowcount
 
-        if query.strip().lower().startswith("select"):
-            return self.cursor.fetchall()
-        else:
-            return self.cursor.rowcount
+        except (pg.OperationalError, pg.InterfaceError):
+            self._connect()
+            self.cursor.execute(query, params or ())
+            if query.strip().lower().startswith("select"):
+                return self.cursor.fetchall()
+            elif (
+                query.strip().lower().startswith("insert")
+                and "returning" in query.lower()
+            ):
+                return self.cursor.fetchone()
+            else:
+                return self.cursor.rowcount
 
     def commit(self):
+        self._connect()
         self.conn.commit()
 
     def rollback(self):
+        self._connect()
         self.conn.rollback()
 
     def close(self):
