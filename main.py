@@ -5,11 +5,14 @@ from zoneinfo import ZoneInfo
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from backend import db_connection
 from backend.api.auth_routes import auth_router
 from backend.api.calculation_routes import calculation_router
 from backend.api.stock_routes import stock_router
+from backend.core.rate_limit import limiter
 
 sp_timezone = ZoneInfo("America/Sao_Paulo")
 
@@ -25,8 +28,11 @@ logging.basicConfig(
     force=True,
 )
 
-
 app = FastAPI(title="API Cotacao", version="1.0.0")
+
+# Configurar o middleware do rate limit
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(stock_router)
 app.include_router(calculation_router)
