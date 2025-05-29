@@ -1,7 +1,7 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Path
 
 from backend.core.stock import Stock
 from backend.models import PaginatedHistory, RequestHistoryParams
@@ -13,7 +13,14 @@ stock_router = APIRouter(tags=["Stock"])
 
 @stock_router.get("/stock/{ticker}")
 def get_stock(
-    ticker: str, authorization: str = Header(..., alias="Authorization")
+    ticker: str = Path(
+        ...,
+        min_length=1,
+        max_length=6,
+        pattern="^[A-Z0-9.]+$",
+        description="Stock ticker symbol (e.g., AAPL, MSFT)",
+    ),
+    authorization: str = Header(..., alias="Authorization"),
 ) -> dict:
     """_summary_
     Args:
@@ -32,10 +39,11 @@ def get_stock(
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if not ticker:
-        logger.error("Ticker symbol is required.")
-        raise HTTPException(status_code=422, detail="Ticker symbol is required.")
+
     try:
+        if not ticker.isalnum() and ticker != ".":
+            raise HTTPException(status_code=400, detail="Invalid ticker format.")
+
         logger.info(f"Fetching stock info for {ticker}")
         stock = Stock(symbol=ticker)
 
