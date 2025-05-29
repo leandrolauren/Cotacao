@@ -29,6 +29,7 @@ class RequestHistoryParams(BaseModel):
         ...,
         min_length=1,
         max_length=10,
+        pattern="^[A-Z0-9.]+$",
         description="Symbol of the stock, e.g., 'AAPL'",
     )
     days: int = Field(
@@ -92,32 +93,33 @@ class Connection(object):
         elif self.cursor is None or self.cursor.closed:
             self.cursor = self.conn.cursor()
 
-    def execute(self, query: str, params=None):
-        try:
-            self._connect()
-            self.cursor.execute(query, params or ())
-            if query.strip().lower().startswith("select"):
-                return self.cursor.fetchall()
-            elif (
-                query.strip().lower().startswith("insert")
-                and "returning" in query.lower()
-            ):
-                return self.cursor.fetchone()
-            else:
-                return self.cursor.rowcount
+    def _validate_query(self, query: str, params=None):
+        if not isinstance(params, (tuple, list, type(None))):
+            raise TypeError("params must be a tuple or list")
 
+        allowed_queries = {"SELECT", "INSERT", "UPDATE", "DELETE"}
+        query_type = query.strip().split()[0].upper()
+        if query_type not in allowed_queries:
+            raise ValueError("Invalid query type")
+
+    def _execute_query(self, query: str, params=None):
+        self._connect()
+        self.cursor.execute(query, params or ())
+
+        query_lower = query.strip().lower()
+        if query_lower.startswith("select"):
+            return self.cursor.fetchall()
+        elif query_lower.startswith("insert") and "returning" in query_lower:
+            return self.cursor.fetchone()
+        return self.cursor.rowcount
+
+    def execute(self, query: str, params=None):
+        self._validate_query(query, params)
+        try:
+            return self._execute_query(query, params)
         except (pg.OperationalError, pg.InterfaceError):
-            self._connect()
-            self.cursor.execute(query, params or ())
-            if query.strip().lower().startswith("select"):
-                return self.cursor.fetchall()
-            elif (
-                query.strip().lower().startswith("insert")
-                and "returning" in query.lower()
-            ):
-                return self.cursor.fetchone()
-            else:
-                return self.cursor.rowcount
+
+            return self._execute_query(query, params)
 
     def commit(self):
         self._connect()
