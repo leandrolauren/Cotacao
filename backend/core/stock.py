@@ -13,9 +13,25 @@ class Stock:
             cls._instance = super(Stock, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, symbol):
+    def __init__(self, symbol: str):
+        if not self._validate_symbol(symbol):
+            raise ValueError("Invalid stock symbol format.")
+
         self.symbol = symbol
         self.data = None
+
+    def _validate_symbol(self, symbol: str) -> bool:
+        """
+        Validate the stock symbol format.
+        Args:
+            symbol (str): Stock symbol to validate.
+        Returns:
+            bool: True if the symbol is valid, False otherwise.
+        """
+        import re
+
+        pattern = r"^[A-Z.]{1,5}$"
+        return bool(re.match(pattern, symbol))
 
     def fetch_data(self):
         """
