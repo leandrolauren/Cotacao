@@ -1,10 +1,11 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
 from backend.core.auth import Auth
+from backend.core.rate_limit import limiter
 
 auth = Auth()
 
@@ -15,7 +16,8 @@ auth_router = APIRouter(tags=["Authentication"])
 
 
 @auth_router.post("/token")
-def get_token(token: str = Depends(auth.oauth2_scheme)):
+@limiter.limit("5/minute")
+def get_token(request: Request, token: str = Depends(auth.oauth2_scheme)):
     """
     Endpoint to verify the access token.
     """
@@ -43,13 +45,16 @@ def get_token(token: str = Depends(auth.oauth2_scheme)):
 
 
 @auth_router.post("/refresh")
-async def refresh_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("5/minute")
+async def refresh_token(
+    request: Request, form_data: OAuth2PasswordRequestForm = Depends()
+):
     """
     Endpoint to refresh the access token using a refresh token.
     """
     logger.info("Refreshing access token.")
     try:
-        refresh_token = form_data.password
+        refresh_token = request.password
 
         # Verify the refresh token
         payload = auth.verify_token(access_token=refresh_token)
@@ -80,7 +85,8 @@ async def refresh_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @auth_router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("5/minute")
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Endpoint for user login, returning an access token.
     """
@@ -132,7 +138,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @auth_router.post("/register")
-async def register(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("3/minute")
+async def register(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     """
     Endpoint for user registration.
 
