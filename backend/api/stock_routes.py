@@ -1,8 +1,9 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request
 
+from backend.core.rate_limit import limiter
 from backend.core.stock import Stock
 from backend.models import PaginatedHistory, RequestHistoryParams
 
@@ -12,7 +13,9 @@ stock_router = APIRouter(tags=["Stock"])
 
 
 @stock_router.get("/stock/{ticker}")
+@limiter.limit("10/minute")
 def get_stock(
+    request: Request,
     ticker: str = Path(
         ...,
         min_length=1,
@@ -66,6 +69,14 @@ def get_stock(
         return info
 
     except Exception as e:
+        if "rate limit" in str(e).lower():
+            logger.warning(f"Rate limit exceeded.")
+            logger.error(f"Error fetching stock info for {ticker}: {str(e)}")
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded. Please try again later.",
+            )
+
         logger.error(f"Error fetching stock info for {ticker}: {str(e)}")
         raise HTTPException(
             status_code=500, detail="An error occurred while fetching stock info."
@@ -73,7 +84,9 @@ def get_stock(
 
 
 @stock_router.get("/history", response_model=PaginatedHistory)
+@limiter.limit("50/minute")
 def get_history(
+    request: Request,
     params: RequestHistoryParams = Depends(),
     authorization: str = Header(..., alias="Authorization"),
 ) -> PaginatedHistory:

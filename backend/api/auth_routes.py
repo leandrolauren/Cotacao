@@ -66,7 +66,6 @@ async def refresh_token(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Generate a new access token
         user_email = payload["sub"]
         access_token = auth.create_access_token(
             data={"sub": user_email}, encrypt_sensitive_data=True

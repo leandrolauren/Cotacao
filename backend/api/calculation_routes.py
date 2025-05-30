@@ -1,8 +1,9 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
+from backend.core.rate_limit import limiter
 from backend.models import CalculationRequest, ResponseCalculation
 
 logger = logging.getLogger(__name__)
@@ -11,8 +12,11 @@ calculation_router = APIRouter(tags=["Calculation"])
 
 
 @calculation_router.post("/calculation", response_model=ResponseCalculation)
+@limiter.limit("5/minute")
 def calculate(
-    request: CalculationRequest, authorization: str = Header(..., alias="Authorization")
+    request: Request,
+    req: CalculationRequest,
+    authorization: str = Header(..., alias="Authorization"),
 ) -> dict:
     """
     Perform a financial calculation based on the provided request data.
@@ -34,16 +38,16 @@ def calculate(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        logger.info(f"Starting calculation: {dict(request)}")
+        logger.info(f"Starting calculation: {dict(req)}")
 
         from backend.core.calculation import Calculation
 
         calc = Calculation()
         total_value, amount_invested, total_interest, months = calc.calculate_totals(
-            initial_value=request.initial_value,
-            monthly_contribution=request.monthly_contribution,
-            annual_interest=request.annual_interest,
-            number_months=request.months,
+            initial_value=req.initial_value,
+            monthly_contribution=req.monthly_contribution,
+            annual_interest=req.annual_interest,
+            number_months=req.months,
         )
 
         logger.info("Calculation ended successfully.")
