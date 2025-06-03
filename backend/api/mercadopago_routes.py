@@ -1,27 +1,30 @@
 import logging
+import os
 import traceback
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
+from backend.core.auth import Auth
+from backend.core.mercadopago import PaymentProcessor
 from backend.core.rate_limit import limiter
 from backend.payment_model import (
     MPCallback,
     MPCallbackResponse,
-    PreferenceRequest,
-    PreferenceResponse,
+    PaymentRequest,
+    PaymentResponse,
 )
 
 logger = logging.getLogger(__name__)
 payment_router = APIRouter(tags=["Payments"])
 
 
-@payment_router.post("/payment/checkout", response_model=PreferenceResponse)
+@payment_router.post("/payments/create", response_model=PaymentResponse)
 @limiter.limit("5/minute")
-async def create_payment_preference(
+async def create_payment(
     request: Request,
-    preference: PreferenceRequest,
+    payment_request: PaymentRequest,
     authorization: str = Header(..., alias="Authorization"),
-) -> PreferenceResponse:
+):
     """
     Create a payment preference using MercadoPago.
 
@@ -32,8 +35,6 @@ async def create_payment_preference(
     Returns:
         PreferenceResponse: Response containing the payment URL and status.
     """
-    from backend.core.auth import Auth
-    from backend.core.mercadopago import PaymentProcessor
 
     auth = Auth()
     if not auth.verify_token(access_token=authorization):
@@ -45,39 +46,30 @@ async def create_payment_preference(
         )
 
     try:
-        logger.info("Creating payment preference.")
-
+        processor = PaymentProcessor()
         items = [
-            {
-                "title": item.title,
-                "description": item.description or "",
-                "quantity": item.quantity,
-                "unit_price": item.unit_price,
-            }
-            for item in preference.items
+            {"symbol": item.symbol, "quantity": item.quantity}
+            for item in payment_request.items
         ]
+
         if not items:
             logger.error("Items list cannot be empty.")
             raise HTTPException(status_code=400, detail="Items list cannot be empty")
-        payer_email = preference.payer_email.strip().lower()
 
-        if not payer_email:
-            logger.error("Payer email is required.")
-            raise HTTPException(status_code=400, detail="Payer email is required")
-
-        processor = PaymentProcessor()
-        response = processor.create_preference(items, payer_email)
-
-        if not response or "sandbox_init_point" not in response:
-            logger.error("Failed to create payment preference.")
-            raise HTTPException(
-                status_code=500, detail="Failed to create payment preference"
-            )
-        logger.info("Payment preference created successfully.")
-
-        return PreferenceResponse(
-            init_point=response["sandbox_init_point"], preference_id=response["id"]
+        result = processor.create_payment_preference(
+            user_id=payment_request.user_id, items=items
         )
+
+        return PaymentResponse(
+            payment_url=result["payment_url"],
+            transaction_ids=result["transaction_ids"],
+        )
+
+    except ValueError as ve:
+        logger.error(f"Error creating payment preference: {ve}")
+        logger.debug(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=str(ve))
+
     except Exception as e:
         logger.error(f"Error creating payment preference: {e}")
         logger.debug(traceback.format_exc())
@@ -109,3 +101,22 @@ async def payment_success(request: Request) -> MPCallbackResponse:
     logger.info("Callback data validated successfully")
 
     return MPCallbackResponse(success=True, data=validate_callback)
+
+
+@payment_router.post("/payments/webhook")
+async def payment_webhook(
+    request: Request,
+    x_signature: str = Header(...),
+):
+    """Handle Mercado Pago webhook notifications."""
+    if x_signature != os.getenv("MP_WEBHOOK_SECRET"):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        payload = await request.json()
+        processor = PaymentProcessor()
+        processor.process_webhook(payload)
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Webhook processing error: {e}")
+        raise HTTPException(status_code=500, detail="Webhook processing failed")
