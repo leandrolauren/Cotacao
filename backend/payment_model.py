@@ -1,28 +1,35 @@
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 
 
 # Model for payment item
-class Item(BaseModel):
-    title: str = Field(..., description="Product name")
-    description: Optional[str] = Field(
-        None, description="Product description (optional)"
-    )
+class PaymentItem(BaseModel):
+    symbol: str = Field(..., description="Stock symbol (e.g., 'AAPL')")
     quantity: int = Field(..., gt=0, description="Quantity")
-    unit_price: float = Field(..., gt=0, description="Unit price")
 
 
 # Model for payment request
-class PreferenceRequest(BaseModel):
-    items: list[Item] = Field(..., description="List of items")
-    payer_email: EmailStr = Field(..., description="Payer's email")
+class PaymentRequest(BaseModel):
+    user_id: int = Field(..., gt=0, description="User ID")
+    items: list[PaymentItem] = Field(..., description="List of items")
 
 
 # Model for payment response
 class PreferenceResponse(BaseModel):
     init_point: str = Field(..., description="URL to initiate the payment")
-    preference_id: str = Field(..., description="Id of preference created")
+    preference_id: str = Field(..., description="Mercado Pago preference ID")
+
+
+class PaymentResponse(BaseModel):
+    payment_url: str = Field(..., description="Mercado Pago checkout URL")
+    transaction_ids: List[int] = Field(..., description="IDs of created transactions")
+
+
+class WebhookPayload(BaseModel):
+    id: str
+    type: str
+    data: dict
 
 
 class MPCallback(BaseModel):
