@@ -121,6 +121,22 @@ class Connection(object):
 
             return self._execute_query(query, params)
 
+    def get_email_user_by_id(self, user_id: int):
+        """
+        Fetch user email by user ID.
+        Returns the email string if found, None if not found.
+        Raises ValueError if user_id is invalid.
+        """
+        if not isinstance(user_id, int) or user_id <= 0:
+            raise ValueError("Invalid user ID. It must be a positive integer.")
+
+        select_user_query = "SELECT email FROM users WHERE id = %s"
+        result = self.execute(select_user_query, (user_id,))
+
+        if result and len(result) > 0:
+            return result[0][0]
+        return None
+
     def commit(self):
         self._connect()
         self.conn.commit()
