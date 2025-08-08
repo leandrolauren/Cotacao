@@ -93,7 +93,7 @@ async def refresh_token(
         return {
             "success": True,
             "token_type": "bearer",
-            "new_access_token": new_acess_token,
+            "access_token": new_acess_token,
             "expires_in_minutes": 500,
         }
 
