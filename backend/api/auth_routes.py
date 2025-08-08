@@ -1,8 +1,9 @@
 import logging
 import traceback
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from jose import JWTError, jwt
 
 from backend.core.auth import Auth
 from backend.core.rate_limit import limiter
@@ -47,32 +48,55 @@ def get_token(request: Request, token: str = Depends(auth.oauth2_scheme)):
 @auth_router.post("/refresh")
 @limiter.limit("5/minute")
 async def refresh_token(
-    request: Request, form_data: OAuth2PasswordRequestForm = Depends()
+    request: Request, refresh_token: str = Form(..., alias="refresh_token")
 ):
     """
     Endpoint to refresh the access token using a refresh token.
     """
     logger.info("Refreshing access token.")
     try:
-        refresh_token = request.password
+        if not refresh_token:
+            logger.error("Refresh token is required.")
+            raise HTTPException(
+                status_code=400,
+                detail="Refresh token is required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        try:
+            SECRET_KEY = auth.secret_key
+            ALGORITHM = auth.algorithm
+            payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+            user = payload.get("sub")
+            user_email = payload.get("email")
+            password = payload.get("password")
 
-        # Verify the refresh token
-        payload = auth.verify_token(access_token=refresh_token)
-        if not payload:
-            logger.warning("Invalid refresh token.")
+            if not user_email != "refresh":
+                logger.error("Invalid refresh token payload.")
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid refresh token",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        except JWTError as e:
+            logger.error(f"JWT Error during refresh token verification: {str(e)}")
             raise HTTPException(
                 status_code=401,
                 detail="Invalid refresh token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        user_email = payload["sub"]
-        access_token = auth.create_access_token(
-            data={"sub": user_email}, encrypt_sensitive_data=True
+        new_acess_token = auth.create_access_token(
+            data={"sub": user, "email": user_email, "password": password},
         )
         logger.info(f"Access token refreshed successfully for user: {user_email}")
 
-        return {"success": True, "access_token": access_token, "token_type": "bearer"}
+        return {
+            "success": True,
+            "token_type": "bearer",
+            "new_access_token": new_acess_token,
+            "expires_in_minutes": 500,
+        }
+
     except HTTPException as e:
         logger.error(f"HTTP Error during token refresh: {e.detail}")
         raise e
